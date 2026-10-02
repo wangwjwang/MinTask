@@ -1,0 +1,60 @@
+/* components/task-card */
+
+.task-card {
+  position: relative;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: var(--gap);
+  margin-bottom: var(--gap-sm);
+  box-shadow: 0 2rpx 12rpx rgba(16, 24, 40, 0.04);
+}
+
+.task-card__head {
+  gap: 16rpx;
+  align-items: flex-start;
+}
+
+.task-card__priority {
+  flex-shrink: 0;
+  margin-top: 4rpx;
+}
+
+.task-card__tags {
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.task-card__progress {
+  margin-top: 20rpx;
+}
+
+.task-card__progress-head {
+  margin-bottom: 10rpx;
+}
+
+.task-card__meta {
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 2rpx solid var(--divider);
+}
+
+.task-card__meta-line {
+  min-height: 36rpx;
+}
+
+.task-card__due {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+.task-card__due--danger {
+  color: var(--tone-danger);
+}
+
+.task-card__due--warn {
+  color: var(--tone-warn);
+}
+
+.task-card__due--done {
+  color: var(--tone-done);
+}

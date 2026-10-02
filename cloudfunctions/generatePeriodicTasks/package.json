@@ -1,0 +1,10 @@
+{
+  "name": "generatePeriodicTasks",
+  "version": "1.0.0",
+  "description": "周期性任务生成（每日定时巡检 + 管理员手动补跑）",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

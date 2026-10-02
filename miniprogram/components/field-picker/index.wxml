@@ -1,0 +1,15 @@
+<!-- components/field-picker -->
+<picker
+  mode="selector"
+  range="{{options}}"
+  value="{{index}}"
+  bindchange="onChange"
+>
+  <view class="field--picker">
+    <view class="field__label {{required ? 'field__label--required' : ''}} picker__label">{{label}}</view>
+    <view class="row">
+      <text class="field__value {{value ? '' : 'field__value--empty'}}">{{value || placeholder}}</text>
+      <text class="field__arrow">›</text>
+    </view>
+  </view>
+</picker>

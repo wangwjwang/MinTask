@@ -1,0 +1,10 @@
+{
+  "name": "notifyService",
+  "version": "1.0.0",
+  "description": "订阅消息服务（本期为空实现骨架）",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

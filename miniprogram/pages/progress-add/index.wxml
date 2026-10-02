@@ -1,0 +1,147 @@
+<!-- pages/progress-add 上报进展 -->
+<view class="page page--with-footer">
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载任务…</view>
+
+  <block wx:elif="{{task}}">
+
+    <!-- ── 任务概要 ──────────────────────────────────────────────── -->
+    <view class="card card--flat">
+      <view class="t-title ellipsis-2">{{task.task_name}}</view>
+      <view class="row row--wrap add__tags">
+        <view class="badge badge--{{task._statusTone}}">{{task.status}}</view>
+        <view class="badge badge--{{task._stageTone}}">{{task.stage}}</view>
+        <view class="badge badge--{{task._priorityTone}}">{{task.priority}}</view>
+        <view wx:if="{{task._hasBlocker}}" class="blocker-flag">卡壳未解决</view>
+      </view>
+      <view class="row row--between add__meta">
+        <text class="t-muted">当前进度 {{task._progressWidth}}%</text>
+        <text class="t-muted t-mono add__due add__due--{{task._dueTone}}">{{task._dueText}}</text>
+      </view>
+    </view>
+
+    <!-- ── 进展描述 ──────────────────────────────────────────────── -->
+    <view class="card">
+      <view class="section-title">
+        <text>进展描述</text>
+        <!-- 提示可以用输入法自带的语音，比内置录音插件更省事、也不挑主体类型 -->
+        <text class="section-title__count">输入法自带语音可直接转文字</text>
+      </view>
+
+      <textarea
+        class="field__textarea add__textarea"
+        placeholder="做了什么、当前结果如何…"
+        placeholder-class="field__placeholder"
+        value="{{description}}"
+        data-field="description"
+        maxlength="2000"
+        auto-height
+        bindinput="onInput"
+      />
+      <view class="row row--between add__counter">
+        <text class="t-muted">{{description.length}} / 2000</text>
+      </view>
+
+      <!-- AI 精简按钮：未启用时点击会明确提示，不阻断 -->
+      <button
+        wx:if="{{showAiButton}}"
+        class="btn btn--plain btn--sm add__ai"
+        loading="{{aiBusy}}"
+        disabled="{{aiBusy}}"
+        bindtap="onAiRefine"
+      >AI 精简</button>
+    </view>
+
+    <!-- ── 卡壳 / 需要支持 ───────────────────────────────────────── -->
+    <view class="card">
+      <view class="field">
+        <view class="field__label">卡壳原因（有阻碍才填）</view>
+        <textarea
+          class="field__textarea add__textarea-sm"
+          placeholder="遇到什么阻碍导致推进不了…"
+          placeholder-class="field__placeholder"
+          value="{{blocker}}"
+          data-field="blocker"
+          maxlength="500"
+          auto-height
+          bindinput="onInput"
+        />
+      </view>
+
+      <view class="field">
+        <view class="field__label">需要支持</view>
+        <textarea
+          class="field__textarea add__textarea-sm"
+          placeholder="需要谁提供什么支持…"
+          placeholder-class="field__placeholder"
+          value="{{needSupport}}"
+          data-field="needSupport"
+          maxlength="500"
+          auto-height
+          bindinput="onInput"
+        />
+      </view>
+    </view>
+
+    <!--
+      ── 进度与状态（★仅主办人可见）─────────────────────────────────
+      需求第 6 节：若只是协办，界面与后端均禁止出现进度%和状态编辑入口。
+      wx:if 提供界面层的隐藏；后端在 progressService.addRecord 里
+      对协办人携带 progress/status/stage 的请求返回 FORBIDDEN_FIELD。
+      两层同时存在，缺一不可。
+    -->
+    <view wx:if="{{isLeader}}" class="card">
+      <view class="section-title">
+        <text>进度与状态</text>
+        <text class="section-title__count">仅主办人可改</text>
+      </view>
+
+      <view class="field">
+        <view class="field__label">整体进度：{{progress}}%</view>
+        <slider
+          min="0"
+          max="100"
+          step="5"
+          value="{{progress}}"
+          activeColor="#2b6cff"
+          block-size="24"
+          bindchanging="onProgressChange"
+          bindchange="onProgressChange"
+        />
+      </view>
+
+      <field-picker
+        label="任务状态"
+        field="status"
+        value="{{status}}"
+        options="{{statusOptions}}"
+        bind:change="onEnumChange"
+      />
+
+      <field-picker
+        label="任务阶段"
+        field="stage"
+        value="{{stage}}"
+        options="{{stageOptions}}"
+        bind:change="onEnumChange"
+      />
+    </view>
+
+    <!-- 协办人视角说明，避免协办人以为自己漏看了什么 -->
+    <view wx:else class="card card--flat add__hint-card">
+      <text class="t-muted">
+        你是本任务的协办人，可提交进展、卡壳与需要支持。进度与状态由主办人维护。
+      </text>
+    </view>
+  </block>
+</view>
+
+<!-- 底部提交栏 -->
+<view wx:if="{{task}}" class="footer-bar">
+  <button
+    class="btn btn--primary"
+    loading="{{submitting}}"
+    disabled="{{submitting}}"
+    bindtap="onSubmit"
+  >提交进展</button>
+</view>

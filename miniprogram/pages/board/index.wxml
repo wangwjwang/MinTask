@@ -1,0 +1,48 @@
+<!-- pages/board Tab3 任务看板 -->
+<view class="board">
+
+  <!-- ── 顶部：筛选 + 汇总 ─────────────────────────────────────── -->
+  <view class="board__header">
+    <picker mode="selector" range="{{categoryOptions}}" bindchange="onFilterChange">
+      <view class="board__filter hit">
+        <text class="board__filter-label">{{filterCategory || '全部分类'}}</text>
+        <text class="board__filter-arrow">▾</text>
+      </view>
+    </picker>
+
+    <view class="board__stats">
+      <text class="board__stat">共 {{stats.total}} 项</text>
+      <text class="board__stat {{stats.blocked ? 'board__stat--danger' : ''}}" bindtap="onBlockedTap">
+        卡壳 {{stats.blocked}}
+      </text>
+      <text class="board__stat {{stats.overdue ? 'board__stat--warn' : ''}}">逾期 {{stats.overdue}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载看板…</view>
+
+  <!-- ── 看板列 ────────────────────────────────────────────────── -->
+  <scroll-view wx:else class="board__scroll" scroll-x enable-flex>
+    <view class="board__cols">
+      <view wx:for="{{columns}}" wx:key="stage" class="board__col">
+        <view class="board__col-head">
+          <text class="board__col-title">{{item.stage}}</text>
+          <text class="board__col-count">{{item.tasks.length}}</text>
+        </view>
+
+        <scroll-view class="board__col-body" scroll-y>
+          <block wx:if="{{item.tasks.length}}">
+            <task-card
+              wx:for="{{item.tasks}}"
+              wx:for-item="task"
+              wx:key="_id"
+              task="{{task}}"
+              bind:tap="onTaskTap"
+            />
+          </block>
+          <view wx:else class="board__col-empty">暂无任务</view>
+        </scroll-view>
+      </view>
+    </view>
+  </scroll-view>
+</view>

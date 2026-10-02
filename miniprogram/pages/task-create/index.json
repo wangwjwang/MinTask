@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "新建任务",
+  "usingComponents": {
+    "field-picker": "/components/field-picker/index"
+  }
+}

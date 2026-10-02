@@ -1,0 +1,36 @@
+<!-- pages/join 加入协办 -->
+<view class="page">
+
+  <view wx:if="{{loading && !list.length}}" class="loading-block">正在加载…</view>
+
+  <block wx:else>
+    <view wx:if="{{list.length}}" class="card card--flat join__intro">
+      <view class="t-sub">
+        以下是他人主办、你尚未参与的任务。点击「加入」即可成为协办人，无需主办人审批。
+      </view>
+    </view>
+
+    <block wx:if="{{list.length}}">
+      <view wx:for="{{list}}" wx:key="_id" class="join__item">
+        <task-card
+          task="{{item}}"
+          show-leader="{{true}}"
+          show-collaborators="{{true}}"
+        />
+        <button
+          class="btn btn--ghost btn--sm join__btn"
+          data-task="{{item}}"
+          loading="{{joiningId === item._id}}"
+          disabled="{{!!joiningId}}"
+          bindtap="onJoin"
+        >加入协办</button>
+      </view>
+    </block>
+
+    <empty-state
+      wx:else
+      title="暂无可加入的任务"
+      hint="他人新建任务后，会出现在这里"
+    />
+  </block>
+</view>

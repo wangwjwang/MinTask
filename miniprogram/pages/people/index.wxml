@@ -1,0 +1,80 @@
+<!-- pages/people Tab4 人员看板 -->
+<view class="page">
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载人员…</view>
+
+  <block wx:else>
+    <!-- ── 顶部说明 ─────────────────────────────────────────────── -->
+    <view class="people__bar">
+      <text class="t-muted">共 {{members.length}} 人</text>
+      <view
+        wx:if="{{unclaimedCount}}"
+        class="people__unclaimed hit"
+        bindtap="onCopyUnclaimed"
+      >{{unclaimedCount}} 人未认领 · 点击复制</view>
+    </view>
+
+    <!-- 导入历史任务表后，把只有姓名、还没挂 openid 的任务/进展补上归属。
+         幂等，可反复点。仅在有人认领之后才有意义。 -->
+    <view
+      wx:if="{{isAdmin && claimedCount}}"
+      class="people__admin hit"
+      bindtap="onRelink"
+    >
+      <text>把历史任务关联到已认领的同事</text>
+      <text class="people__admin-sub">已认领 {{claimedCount}} 人 · 点此补齐主办/协办归属</text>
+    </view>
+
+    <empty-state
+      wx:if="{{!members.length}}"
+      title="还没有成员"
+      hint="请管理员在云数据库 members 集合导入全员名单"
+    />
+
+    <!-- ── 成员卡片 ─────────────────────────────────────────────── -->
+    <view
+      wx:for="{{members}}"
+      wx:key="_id"
+      class="card member hit {{item._isMe ? 'member--me' : ''}} {{item.claimed ? '' : 'member--unclaimed'}}"
+      data-openid="{{item.openid}}"
+      data-name="{{item.name}}"
+      bindtap="onMemberTap"
+    >
+      <!-- 头像占位：取姓名末两字，避免引入图片资源 -->
+      <view class="member__avatar {{item.claimed ? '' : 'member__avatar--off'}}">
+        {{item.name}}
+      </view>
+
+      <view class="flex-1 member__main">
+        <view class="row">
+          <text class="member__name">{{item.name}}</text>
+          <text wx:if="{{item._isMe}}" class="tag member__tag">我</text>
+          <text wx:if="{{item.role === '管理员'}}" class="badge badge--active member__tag">管理员</text>
+          <text wx:if="{{!item.claimed}}" class="badge badge--idle member__tag">未认领</text>
+        </view>
+
+        <view class="row member__dept" wx:if="{{item.dept}}">
+          <text class="t-muted">{{item.dept}}</text>
+        </view>
+
+        <!-- 负载数字 -->
+        <view class="row member__stats">
+          <text class="member__stat">
+            <text class="member__num">{{item.led}}</text> 主办
+          </text>
+          <text class="member__stat">
+            <text class="member__num">{{item.joined}}</text> 协办
+          </text>
+          <text class="member__stat member__stat--open" wx:if="{{item.open}}">
+            在办 <text class="member__num">{{item.open}}</text>
+          </text>
+          <text class="member__stat member__stat--done" wx:if="{{item.done}}">
+            已完成 {{item.done}}
+          </text>
+        </view>
+      </view>
+
+      <text class="field__arrow">›</text>
+    </view>
+  </block>
+</view>

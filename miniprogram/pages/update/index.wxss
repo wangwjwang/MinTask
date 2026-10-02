@@ -1,0 +1,12 @@
+/* pages/update */
+
+.update__filter {
+  margin-bottom: var(--gap);
+}
+
+.update__filter-value {
+  margin-left: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--primary);
+}

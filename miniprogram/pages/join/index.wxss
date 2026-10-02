@@ -1,0 +1,19 @@
+/* pages/join */
+
+.join__intro {
+  margin-bottom: var(--gap);
+}
+
+/*
+ * 卡片与按钮叠放：task-card 自带 margin-bottom，
+ * 这里把按钮上移，让它在视觉上归属上方那张卡片。
+ */
+.join__item {
+  position: relative;
+}
+
+.join__btn {
+  display: flex;
+  width: 100%;
+  margin: -8rpx 0 24rpx;
+}

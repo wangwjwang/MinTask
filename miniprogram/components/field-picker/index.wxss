@@ -1,0 +1,15 @@
+/* components/field-picker */
+
+/*
+ * field--picker 在 app.wxss 里是 flex + space-between，
+ * 但这里外层多了一个 picker 标签，所以把标签行单独撑开。
+ */
+.field--picker {
+  width: 100%;
+}
+
+.picker__label {
+  flex: 1;
+  margin-bottom: 0;
+  margin-right: 24rpx;
+}

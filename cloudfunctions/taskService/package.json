@@ -1,0 +1,10 @@
+{
+  "name": "taskService",
+  "version": "1.0.0",
+  "description": "任务服务：新建、修改、加入/退出协办、删除",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

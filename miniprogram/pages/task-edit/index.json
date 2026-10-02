@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "修改任务",
+  "usingComponents": {
+    "field-picker": "/components/field-picker/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}

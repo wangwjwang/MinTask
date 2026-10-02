@@ -1,0 +1,67 @@
+<!-- pages/report Tab1 报任务 -->
+<view class="page page--with-footer">
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载任务…</view>
+
+  <block wx:else>
+    <!-- ── 区块 1：我主办的任务 ───────────────────────────────────── -->
+    <view class="section-title">
+      <text>我主办的任务</text>
+      <text class="section-title__count">{{ledTasks.length}} 项</text>
+    </view>
+
+    <block wx:if="{{ledTasks.length}}">
+      <task-card
+        wx:for="{{ledTasks}}"
+        wx:key="_id"
+        task="{{item}}"
+        bind:tap="onTaskTap"
+      />
+    </block>
+    <empty-state
+      wx:else
+      title="还没有你主办的任务"
+      hint="点击下方「新建任务」创建第一项"
+    />
+
+    <view class="divider"></view>
+
+    <!-- ── 区块 2：我参与的协办任务 ───────────────────────────────── -->
+    <view class="section-title">
+      <text>我参与的协办任务</text>
+      <text class="section-title__count">{{joinedTasks.length}} 项</text>
+    </view>
+
+    <block wx:if="{{joinedTasks.length}}">
+      <task-card
+        wx:for="{{joinedTasks}}"
+        wx:key="_id"
+        task="{{item}}"
+        show-collaborators="{{false}}"
+        show-leader="{{true}}"
+        bind:tap="onTaskTap"
+      />
+    </block>
+    <empty-state
+      wx:else
+      title="还没有你协办的任务"
+      hint="点击下方「新加入协办」认领他人任务"
+    />
+
+    <!-- ── 区块 3：新加入协办入口 ─────────────────────────────────── -->
+    <view class="card card--flat join-entry hit" bindtap="onJoinTap">
+      <view class="row row--between">
+        <view class="flex-1">
+          <view class="t-title">新加入协办</view>
+          <view class="t-muted">浏览他人主办的任务，无需审批即可加入</view>
+        </view>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+  </block>
+</view>
+
+<!-- ── 区块 4：新建任务（页面最底部固定按钮）────────────────────── -->
+<view class="footer-bar">
+  <button class="btn btn--primary" bindtap="onCreateTap">＋ 新建任务</button>
+</view>

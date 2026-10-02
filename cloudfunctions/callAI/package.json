@@ -1,0 +1,10 @@
+{
+  "name": "callAI",
+  "version": "1.0.0",
+  "description": "AI 文本精简（默认关闭，配置 AI_ENABLED=true + DEEPSEEK_API_KEY 后启用）",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

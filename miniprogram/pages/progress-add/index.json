@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "上报进展",
+  "usingComponents": {
+    "field-picker": "/components/field-picker/index"
+  }
+}

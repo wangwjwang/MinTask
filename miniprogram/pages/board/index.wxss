@@ -1,0 +1,125 @@
+/* pages/board 任务看板 */
+
+/*
+ * 看板用横向滚动的多列布局。手机上三列并排会挤，
+ * 所以列宽设为屏宽的 ~72%，既能看到完整一列，又能瞥见下一列引导横滑。
+ */
+.board {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+}
+
+.board__header {
+  padding: var(--gap) var(--gap) 8rpx;
+  background: var(--card);
+  border-bottom: 2rpx solid var(--border);
+  flex-shrink: 0;
+}
+
+.board__filter {
+  display: inline-flex;
+  align-items: center;
+  padding: 14rpx 28rpx;
+  border-radius: 999rpx;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.board__filter-arrow {
+  margin-left: 10rpx;
+  font-size: 22rpx;
+}
+
+.board__stats {
+  display: flex;
+  gap: 28rpx;
+  margin-top: 20rpx;
+  padding-bottom: 8rpx;
+}
+
+.board__stat {
+  font-size: 24rpx;
+  color: var(--muted);
+}
+
+.board__stat--danger {
+  color: var(--tone-danger);
+  font-weight: 600;
+}
+
+.board__stat--warn {
+  color: var(--tone-warn);
+  font-weight: 600;
+}
+
+/* ── 列 ── */
+
+.board__scroll {
+  flex: 1;
+  min-height: 0;
+  white-space: nowrap;
+}
+
+.board__cols {
+  display: flex;
+  height: 100%;
+  padding: 0 var(--gap);
+  box-sizing: border-box;
+}
+
+.board__col {
+  width: 72vw;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  margin-right: var(--gap-sm);
+  padding-top: var(--gap);
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.board__col:last-child {
+  margin-right: 0;
+}
+
+.board__col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8rpx 16rpx;
+  flex-shrink: 0;
+}
+
+.board__col-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.board__col-count {
+  font-size: 24rpx;
+  color: var(--muted);
+  background: var(--card);
+  border-radius: 999rpx;
+  padding: 2rpx 16rpx;
+}
+
+.board__col-body {
+  flex: 1;
+  min-height: 0;
+  /* 纵向滚动只在列内发生，横向由外层 scroll-view 接管 */
+  white-space: normal;
+}
+
+.board__col-empty {
+  padding: 60rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #b8bcc4;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius);
+}

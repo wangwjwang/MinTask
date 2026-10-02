@@ -1,0 +1,60 @@
+<!-- pages/person-detail 某成员名下的任务 -->
+<view class="page">
+
+  <!-- ── 分栏：主办 / 协办 ─────────────────────────────────────── -->
+  <view class="ptabs">
+    <view
+      class="ptabs__item {{tab === 'led' ? 'ptabs__item--on' : ''}}"
+      data-tab="led"
+      bindtap="onTabChange"
+    >主办 <text class="ptabs__num">{{led.length + ledDone.length}}</text></view>
+    <view
+      class="ptabs__item {{tab === 'joined' ? 'ptabs__item--on' : ''}}"
+      data-tab="joined"
+      bindtap="onTabChange"
+    >协办 <text class="ptabs__num">{{joined.length + joinedDone.length}}</text></view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载…</view>
+
+  <block wx:else>
+    <empty-state
+      wx:if="{{!shownOpen.length && !shownDone.length}}"
+      title="{{tab === 'led' ? '还没有主办的任务' : '还没有协办的任务'}}"
+      hint="{{tab === 'led' ? '去「新建任务」创建一条' : '去「可加入」列表看看有什么能帮上忙的'}}"
+    />
+
+    <!-- ── 进行中的任务 ─────────────────────────────────────────── -->
+    <block wx:if="{{shownOpen.length}}">
+      <view class="section-title">
+        <text>进行中</text>
+        <text class="section-title__count">{{shownOpen.length}} 项</text>
+      </view>
+      <task-card
+        wx:for="{{shownOpen}}"
+        wx:key="_id"
+        task="{{item}}"
+        show-leader="{{tab === 'joined'}}"
+        bind:tap="onTaskTap"
+      />
+    </block>
+
+    <!-- ── 已完成（默认折叠，避免长列表淹没在办任务）──────────────── -->
+    <block wx:if="{{shownDone.length}}">
+      <view class="section-title hit" bindtap="onToggleDone">
+        <text>已完成</text>
+        <text class="section-title__count">{{shownDone.length}} 项 {{showDone ? '收起 ▲' : '展开 ▼'}}</text>
+      </view>
+      <block wx:if="{{showDone}}">
+        <task-card
+          wx:for="{{shownDone}}"
+          wx:key="_id"
+          task="{{item}}"
+          show-progress="{{false}}"
+          show-leader="{{tab === 'joined'}}"
+          bind:tap="onTaskTap"
+        />
+      </block>
+    </block>
+  </block>
+</view>

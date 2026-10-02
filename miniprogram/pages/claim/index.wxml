@@ -1,0 +1,54 @@
+<!-- pages/claim 启动页 / 成员认领 -->
+<view class="page page--with-footer">
+
+  <view wx:if="{{loading}}" class="loading-block">正在识别你的身份…</view>
+
+  <block wx:else>
+    <!-- 错误提示（云环境未配置 / 名单为空） -->
+    <view wx:if="{{errorMsg}}" class="card claim__error">
+      <view class="t-title claim__error-title">无法继续</view>
+      <view class="t-sub">{{errorMsg}}</view>
+      <button class="btn btn--ghost btn--sm claim__retry" bindtap="bootstrap">重试</button>
+    </view>
+
+    <block wx:if="{{list.length}}">
+      <view class="card card--flat claim__intro">
+        <view class="t-sub">
+          请从下方选择你的姓名。系统用它来判定任务权限 —— 选错会导致你无法修改自己的任务。
+        </view>
+      </view>
+
+      <view class="section-title">
+        <text>团队成员</text>
+        <text class="section-title__count">{{list.length}} 人</text>
+      </view>
+
+      <view
+        wx:for="{{list}}"
+        wx:key="_id"
+        class="card claim__item hit {{selectedId === item._id ? 'claim__item--active' : ''}}"
+        data-id="{{item._id}}"
+        bindtap="onSelect"
+      >
+        <view class="row row--between">
+          <view class="flex-1">
+            <view class="t-title">{{item.name}}</view>
+            <view wx:if="{{item.dept}}" class="t-muted">{{item.dept}}</view>
+          </view>
+          <view wx:if="{{item.role === '管理员'}}" class="badge badge--active">管理员</view>
+          <view wx:if="{{selectedId === item._id}}" class="claim__check">✓</view>
+        </view>
+      </view>
+    </block>
+  </block>
+</view>
+
+<!-- 底部固定确认栏 -->
+<view wx:if="{{!loading && list.length}}" class="footer-bar">
+  <button
+    class="btn btn--primary {{selectedId ? '' : 'btn--disabled'}}"
+    disabled="{{!selectedId || submitting}}"
+    loading="{{submitting}}"
+    bindtap="onConfirm"
+  >确认是我的姓名</button>
+</view>

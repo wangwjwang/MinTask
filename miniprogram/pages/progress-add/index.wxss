@@ -1,0 +1,47 @@
+/* pages/progress-add 上报进展 */
+
+.add__tags {
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.add__meta {
+  margin-top: 16rpx;
+}
+
+.add__due--danger { color: var(--tone-danger); }
+.add__due--warn   { color: var(--tone-warn); }
+.add__due--done   { color: var(--muted); }
+
+/* ── 输入区 ── */
+
+.add__textarea {
+  margin-top: 16rpx;
+  padding: 20rpx;
+  box-sizing: border-box;
+  width: 100%;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+.add__textarea-sm {
+  padding: 16rpx 20rpx;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100rpx;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+.add__counter {
+  margin-top: 8rpx;
+}
+
+.add__ai {
+  display: inline-flex;
+  margin-top: 20rpx;
+}
+
+.add__hint-card {
+  margin-top: var(--gap);
+}

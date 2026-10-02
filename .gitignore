@@ -1,0 +1,50 @@
+# ── 依赖 ──────────────────────────────────────────────────────────────
+node_modules/
+cloudfunctions/*/node_modules/
+
+# 注意：miniprogram/shared/ 与 cloudfunctions/*/lib/shared/ 是
+# scripts/sync-shared.js 生成的副本，但**必须提交进仓库** ——
+# 否则别人 clone 下来无法直接编译（会缺模块）。
+# 这是「零构建步骤」约束的代价，不要把它们加进 .gitignore。
+
+# ── 密钥与本地配置（★ 绝对不要提交）────────────────────────────────────
+*.env
+.env*
+# 云函数的本地环境变量文件
+cloudfunctions/*/env.json
+cloudfunctions/*/.env
+# 本地调试用的私有配置
+miniprogram/config.local.js
+private.config.json
+project.private.config.json
+
+# ── 微信开发者工具 ────────────────────────────────────────────────────
+.DS_Store
+*.log
+# 工具生成的临时目录
+miniprogram_npm/
+cloudfunctions/*/node_modules/.cache/
+
+# ── 编辑器 ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*~
+
+# ── 构建产物 ──────────────────────────────────────────────────────────
+dist/
+build/
+
+# ── 成员名单转换产物 ──────────────────────────────────────────────────
+# scripts/make-member-import.js 由 members.json 生成，用于导入云数据库。
+# 它是派生物，提交进来反而危险：改了 members.json 却忘了重新生成时，
+# 仓库里会躺着一份过期名单，被误导入线上集合。
+# ★ members.json（源文件）要提交，这个不要。
+scripts/members.import.json
+
+# ── 历史任务表转换产物 ────────────────────────────────────────────────
+# 同理：tasks.source.csv 是源，这两份是派生物。
+# 它们动辄上百条、几十 KB，提交进来只会让 diff 噪音变大，
+# 而且它们**必须**与源表同时更新，一旦不同步就是"看到的数据和库里不一样"。
+scripts/tasks.import.json
+scripts/progress_records.import.json

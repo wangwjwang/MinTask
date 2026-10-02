@@ -1,0 +1,184 @@
+<!-- pages/task-create 新建任务 -->
+<view class="page page--with-footer">
+
+  <!-- ── 基本信息 ──────────────────────────────────────────────── -->
+  <view class="card">
+    <view class="field">
+      <view class="field__label field__label--required">任务名称</view>
+      <input
+        class="field__input"
+        placeholder="一句话说明要做什么"
+        placeholder-class="field__placeholder"
+        value="{{form.task_name}}"
+        data-field="task_name"
+        maxlength="100"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="field__label">任务详情 / 目标描述</view>
+      <textarea
+        class="field__textarea"
+        placeholder="最终要实现什么目的、验收标准是什么…"
+        placeholder-class="field__placeholder"
+        value="{{form.detail}}"
+        data-field="detail"
+        maxlength="2000"
+        auto-height
+        bindinput="onInput"
+      />
+    </view>
+
+    <field-picker
+      label="任务分类"
+      field="category"
+      value="{{form.category}}"
+      options="{{categoryOptions}}"
+      required
+      bind:change="onEnumChange"
+    />
+
+    <field-picker
+      label="任务来源"
+      field="source"
+      value="{{form.source}}"
+      options="{{sourceOptions}}"
+      required
+      bind:change="onEnumChange"
+    />
+
+    <field-picker
+      label="任务性质"
+      field="task_type"
+      value="{{form.task_type}}"
+      options="{{taskTypeOptions}}"
+      bind:change="onEnumChange"
+    />
+
+    <field-picker
+      label="优先级"
+      field="priority"
+      value="{{form.priority}}"
+      options="{{priorityOptions}}"
+      bind:change="onEnumChange"
+    />
+  </view>
+
+  <!-- ── 人员 ──────────────────────────────────────────────────── -->
+  <view class="card">
+    <!-- 主办人：普通用户固定为自己，管理员可选他人 -->
+    <block wx:if="{{canPickLeader}}">
+      <picker mode="selector" range="{{leaderCandidates}}" range-key="name" bindchange="onLeaderChange">
+        <view class="field--picker">
+          <view class="field__label field__label--required picker__label">主办人</view>
+          <view class="row">
+            <text class="field__value">{{leaderName}}</text>
+            <text class="field__arrow">›</text>
+          </view>
+        </view>
+      </picker>
+    </block>
+    <view wx:else class="field--picker">
+      <view class="field__label picker__label">主办人</view>
+      <view class="row">
+        <text class="field__value">{{leaderName}}</text>
+        <text class="tag create__self-tag">本人</text>
+      </view>
+    </view>
+
+    <!-- 协办人：多选 -->
+    <view class="field--picker" bindtap="onToggleMemberPanel">
+      <view class="field__label picker__label">协办人（可多选）</view>
+      <view class="row">
+        <text class="field__value {{collaboratorIds.length ? '' : 'field__value--empty'}}">
+          {{collaboratorIds.length ? collaboratorIds.length + ' 人已选' : '未选择'}}
+        </text>
+        <text class="field__arrow">{{memberPanelOpen ? '⌄' : '›'}}</text>
+      </view>
+    </view>
+
+    <!-- 协办人多选面板 -->
+    <view wx:if="{{memberPanelOpen}}" class="create__members">
+      <view wx:if="{{!allMembers.length}}" class="t-muted create__members-empty">
+        暂无可选成员（其他成员需先认领身份）
+      </view>
+      <view
+        wx:for="{{allMembers}}"
+        wx:key="_id"
+        class="create__member hit {{collaboratorIds.indexOf(item.openid) !== -1 ? 'create__member--on' : ''}}"
+        data-openid="{{item.openid}}"
+        bindtap="onToggleMember"
+      >
+        <view class="flex-1">
+          <text class="create__member-name">{{item.name}}</text>
+          <text wx:if="{{item.dept}}" class="t-muted create__member-dept">{{item.dept}}</text>
+        </view>
+        <view wx:if="{{collaboratorIds.indexOf(item.openid) !== -1}}" class="create__member-check">✓</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ── 时间 ──────────────────────────────────────────────────── -->
+  <view class="card">
+    <picker mode="date" value="{{form.start_date}}" start="{{minDate}}" end="{{maxDate}}" bindchange="onStartDateChange">
+      <view class="field--picker">
+        <view class="field__label picker__label">计划开始时间</view>
+        <view class="row">
+          <text class="field__value t-mono">{{form.start_date || '请选择'}}</text>
+          <text class="field__arrow">›</text>
+        </view>
+      </view>
+    </picker>
+
+    <picker mode="date" value="{{form.due_date}}" start="{{minDate}}" end="{{maxDate}}" bindchange="onDueDateChange">
+      <view class="field--picker">
+        <view class="field__label field__label--required picker__label">计划截止时间</view>
+        <view class="row">
+          <text class="field__value t-mono {{form.due_date ? '' : 'field__value--empty'}}">
+            {{form.due_date || '必填'}}
+          </text>
+          <text class="field__arrow">›</text>
+        </view>
+      </view>
+    </picker>
+  </view>
+
+  <!-- ── 周期性（选填）──────────────────────────────────────────── -->
+  <view class="card">
+    <field-picker
+      label="周期频率"
+      field="recur_freq"
+      value="{{form.recur_freq}}"
+      options="{{recurFreqOptions}}"
+      bind:change="onEnumChange"
+    />
+
+    <view wx:if="{{form.recur_freq !== '不适用'}}" class="field">
+      <view class="field__label">具体周期规则</view>
+      <input
+        class="field__input"
+        placeholder="例如：每月第一个工作日 / 每季度末月 20 日"
+        placeholder-class="field__placeholder"
+        value="{{form.recur_rule}}"
+        data-field="recur_rule"
+        maxlength="200"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="t-muted create__tip">
+      提示：需要系统每月自动生成的任务，请由管理员配置「周期任务模板」，
+      本表单创建的是一次性任务。
+    </view>
+  </view>
+</view>
+
+<view class="footer-bar">
+  <button
+    class="btn btn--primary"
+    loading="{{submitting}}"
+    disabled="{{submitting}}"
+    bindtap="onSubmit"
+  >创建任务</button>
+</view>

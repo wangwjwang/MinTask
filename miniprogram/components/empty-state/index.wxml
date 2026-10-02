@@ -1,0 +1,16 @@
+<!-- components/empty-state -->
+<view class="empty">
+  <block wx:if="{{loading}}">
+    <view class="empty__title">加载中…</view>
+  </block>
+
+  <block wx:else>
+    <view class="empty__title">{{title}}</view>
+    <view wx:if="{{hint}}" class="empty__hint">{{hint}}</view>
+    <button
+      wx:if="{{actionText}}"
+      class="btn btn--ghost btn--sm empty__action"
+      bindtap="onAction"
+    >{{actionText}}</button>
+  </block>
+</view>

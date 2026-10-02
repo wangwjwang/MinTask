@@ -1,0 +1,35 @@
+/* pages/claim */
+
+.claim__intro {
+  margin-bottom: var(--gap);
+}
+
+.claim__error {
+  border-left: 8rpx solid var(--tone-warn);
+}
+
+.claim__error-title {
+  margin-bottom: 8rpx;
+}
+
+.claim__retry {
+  display: inline-flex;
+  margin-top: 24rpx;
+}
+
+.claim__item {
+  border: 4rpx solid transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.claim__item--active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.claim__check {
+  margin-left: 16rpx;
+  color: var(--primary);
+  font-size: 36rpx;
+  font-weight: 600;
+}

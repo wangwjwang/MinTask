@@ -1,0 +1,10 @@
+{
+  "name": "progressService",
+  "version": "1.0.0",
+  "description": "进展服务：新增进展记录、标记卡壳已解决",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

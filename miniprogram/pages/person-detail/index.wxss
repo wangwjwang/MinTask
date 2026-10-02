@@ -1,0 +1,33 @@
+/* pages/person-detail */
+
+.ptabs {
+  display: flex;
+  gap: 12rpx;
+  padding: 6rpx;
+  margin-bottom: 20rpx;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: 0 2rpx 12rpx rgba(16, 24, 40, 0.04);
+}
+
+.ptabs__item {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  border-radius: var(--radius-sm);
+  font-size: 28rpx;
+  color: var(--text-sub);
+  transition: background 0.15s ease;
+}
+
+.ptabs__item--on {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.ptabs__num {
+  font-size: 24rpx;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}

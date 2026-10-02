@@ -1,0 +1,28 @@
+# ── 统一换行符为 LF ───────────────────────────────────────────────────
+#
+# ★ 为什么必须显式指定，而不能靠 git 的默认行为：
+#
+#   Windows 上 Git for Windows 默认 core.autocrlf=true，检出时会把文件
+#   改写成 CRLF。而本项目有 scripts/sync-shared.js 用
+#   `if (old === content)` **逐字符**比对 shared/ 源文件与两端副本。
+#   一旦 git 改写了其中一部分（比如只检出修改过的那些），
+#   比对就会误报"未同步"，让人去改本来没问题的文件。
+#
+#   固定成 LF 之后，工作区、索引、仓库三处的字节完全一致，
+#   这个机制才可靠。
+#
+# 影响范围：小程序代码、云函数、脚本、文档全部统一。
+#   微信开发者工具不关心换行符，改成 LF 不影响编译。
+
+* text=auto eol=lf
+
+# ── 二进制文件：禁止任何文本转换 ──────────────────────────────────────
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.ttf  binary
+*.woff binary
+*.woff2 binary
+*.zip  binary

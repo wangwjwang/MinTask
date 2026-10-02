@@ -1,0 +1,6 @@
+/* components/empty-state */
+
+.empty__action {
+  display: inline-flex;
+  margin-top: 32rpx;
+}

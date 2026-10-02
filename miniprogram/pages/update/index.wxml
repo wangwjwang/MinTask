@@ -1,0 +1,40 @@
+<!-- pages/update Tab2 改任务 -->
+<view class="page">
+
+  <picker mode="selector" range="{{stageOptions}}" bindchange="onFilterChange">
+    <view class="card card--flat update__filter hit">
+      <view class="row row--between">
+        <view class="row">
+          <text class="t-sub">阶段筛选</text>
+          <text class="update__filter-value">{{filterStage || '全部'}}</text>
+        </view>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+  </picker>
+
+  <view wx:if="{{loading && !tasks.length}}" class="loading-block">正在加载…</view>
+
+  <block wx:else>
+    <block wx:if="{{shownTasks.length}}">
+      <task-card
+        wx:for="{{shownTasks}}"
+        wx:key="_id"
+        task="{{item}}"
+        bind:tap="onTaskTap"
+      />
+    </block>
+
+    <empty-state
+      wx:elif="{{tasks.length}}"
+      title="该阶段下没有任务"
+      hint="换个筛选条件看看"
+    />
+
+    <empty-state
+      wx:else
+      title="还没有你主办的任务"
+      hint="请到「报任务」页新建任务"
+    />
+  </block>
+</view>

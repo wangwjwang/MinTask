@@ -1,0 +1,9 @@
+/* pages/report */
+
+.join-entry {
+  margin-top: var(--gap);
+}
+
+.join-entry .field__arrow {
+  font-size: 40rpx;
+}

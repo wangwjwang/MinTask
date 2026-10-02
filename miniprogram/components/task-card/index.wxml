@@ -1,0 +1,56 @@
+<!--
+  components/task-card
+  任务卡片。所有展示用的派生字段（_dueText / _statusTone / _hasBlocker 等）
+  都由 utils/format.js 的 decorateTask 预先算好，这里只负责渲染。
+-->
+<view
+  wx:if="{{task}}"
+  class="task-card hit {{task._hasBlocker ? 'card--blocked' : ''}}"
+  bindtap="onTap"
+>
+  <!-- 第一行：任务名 + 优先级 -->
+  <view class="row row--between task-card__head">
+    <view class="flex-1 t-title ellipsis-2">{{task.task_name}}</view>
+    <view class="badge badge--{{task._priorityTone}} task-card__priority">{{task.priority}}</view>
+  </view>
+
+  <!-- 第二行：状态 / 阶段 / 卡壳标记 -->
+  <view class="row row--wrap task-card__tags">
+    <view class="badge badge--{{task._statusTone}}">{{task.status}}</view>
+    <view class="badge badge--{{task._stageTone}}">{{task.stage}}</view>
+    <view wx:if="{{task._hasBlocker}}" class="blocker-flag">
+      <text>卡壳</text>
+    </view>
+    <view wx:if="{{task.origin === 'periodic'}}" class="tag">周期</view>
+  </view>
+
+  <!-- 进度条 -->
+  <view wx:if="{{showProgress}}" class="task-card__progress">
+    <view class="row row--between task-card__progress-head">
+      <text class="t-muted">进度</text>
+      <text class="t-mono t-sub">{{task._progressWidth}}%</text>
+    </view>
+    <view class="progress">
+      <view
+        class="progress__bar {{task.stage === '已完成' ? 'progress__bar--done' : ''}} {{task._overdue ? 'progress__bar--danger' : ''}}"
+        style="width: {{task._progressWidth}}%;"
+      ></view>
+    </view>
+  </view>
+
+  <!-- 底部：分类 / 截止 / 主办 / 协办 -->
+  <view class="task-card__meta">
+    <view class="row row--between task-card__meta-line">
+      <text class="t-muted ellipsis">{{task.category}}</text>
+      <text class="t-muted t-mono task-card__due task-card__due--{{task._dueTone}}">{{task._dueText}}</text>
+    </view>
+
+    <view wx:if="{{showLeader}}" class="row task-card__meta-line">
+      <text class="t-muted">主办：{{task.leader || '—'}}</text>
+    </view>
+
+    <view wx:if="{{showCollaborators}}" class="row task-card__meta-line">
+      <text class="t-muted ellipsis">协办：{{task._collaboratorText}}</text>
+    </view>
+  </view>
+</view>

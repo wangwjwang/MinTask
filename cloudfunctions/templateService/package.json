@@ -1,0 +1,10 @@
+{
+  "name": "templateService",
+  "version": "1.0.0",
+  "description": "周期任务模板服务（仅管理员）+ 手动补跑",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1,0 +1,204 @@
+<!-- pages/task-edit 修改任务（仅主办人）-->
+<view class="page page--with-footer">
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载…</view>
+
+  <block wx:else>
+    <!-- ── 名称与详情 ────────────────────────────────────────────── -->
+    <view class="card">
+      <view class="field">
+        <view class="field__label field__label--required">任务名称</view>
+        <input
+          class="field__input"
+          value="{{form.task_name}}"
+          data-field="task_name"
+          maxlength="100"
+          bindinput="onInput"
+        />
+      </view>
+
+      <view class="field">
+        <view class="field__label">任务详情 / 目标描述</view>
+        <textarea
+          class="field__textarea"
+          placeholder="最终要实现什么目的…"
+          placeholder-class="field__placeholder"
+          value="{{form.detail}}"
+          data-field="detail"
+          maxlength="2000"
+          auto-height
+          bindinput="onInput"
+        />
+      </view>
+    </view>
+
+    <!-- ── 推进状态（主办人最常改的一组）─────────────────────────── -->
+    <view class="card">
+      <view class="section-title">
+        <text>推进状态</text>
+      </view>
+
+      <view class="field">
+        <view class="row row--between">
+          <text class="field__label">整体进度</text>
+          <text class="t-mono t-sub">{{form.progress}}%</text>
+        </view>
+        <slider
+          min="0"
+          max="100"
+          step="5"
+          value="{{form.progress}}"
+          activeColor="#2b6cff"
+          block-size="24"
+          bindchanging="onProgressChange"
+          bindchange="onProgressChange"
+        />
+      </view>
+
+      <field-picker
+        label="任务状态（健康度）"
+        field="status"
+        value="{{form.status}}"
+        options="{{statusOptions}}"
+        bind:change="onEnumChange"
+      />
+
+      <field-picker
+        label="任务阶段"
+        field="stage"
+        value="{{form.stage}}"
+        options="{{stageOptions}}"
+        bind:change="onEnumChange"
+      />
+
+      <view class="t-muted edit__tip">
+        「状态」表示任务健不健康（正常/有风险/受阻/已完成），
+        「阶段」表示做到哪一步了（未开始/进行中/已完成）。
+        阶段改为「已完成」时，系统会自动填写实际完成时间。
+      </view>
+    </view>
+
+    <!-- ── 分类与优先级 ──────────────────────────────────────────── -->
+    <view class="card">
+      <field-picker
+        label="任务分类"
+        field="category"
+        value="{{form.category}}"
+        options="{{categoryOptions}}"
+        bind:change="onEnumChange"
+      />
+      <field-picker
+        label="任务来源"
+        field="source"
+        value="{{form.source}}"
+        options="{{sourceOptions}}"
+        bind:change="onEnumChange"
+      />
+      <field-picker
+        label="任务性质"
+        field="task_type"
+        value="{{form.task_type}}"
+        options="{{taskTypeOptions}}"
+        bind:change="onEnumChange"
+      />
+      <field-picker
+        label="优先级"
+        field="priority"
+        value="{{form.priority}}"
+        options="{{priorityOptions}}"
+        bind:change="onEnumChange"
+      />
+    </view>
+
+    <!-- ── 时间 ──────────────────────────────────────────────────── -->
+    <view class="card">
+      <picker mode="date" value="{{form.start_date}}" start="{{minDate}}" end="{{maxDate}}" data-field="start_date" bindchange="onDateChange">
+        <view class="field--picker">
+          <view class="field__label picker__label">计划开始时间</view>
+          <view class="row">
+            <text class="field__value t-mono {{form.start_date ? '' : 'field__value--empty'}}">
+              {{form.start_date || '未设置'}}
+            </text>
+            <text class="field__arrow">›</text>
+          </view>
+        </view>
+      </picker>
+
+      <picker mode="date" value="{{form.due_date}}" start="{{minDate}}" end="{{maxDate}}" data-field="due_date" bindchange="onDateChange">
+        <view class="field--picker">
+          <view class="field__label picker__label">计划截止时间</view>
+          <view class="row">
+            <text class="field__value t-mono {{form.due_date ? '' : 'field__value--empty'}}">
+              {{form.due_date || '未设置'}}
+            </text>
+            <text class="field__arrow">›</text>
+          </view>
+        </view>
+      </picker>
+
+      <picker mode="date" value="{{form.actualCompleteTime}}" start="{{minDate}}" end="{{maxDate}}" data-field="actualCompleteTime" bindchange="onDateChange">
+        <view class="field--picker">
+          <view class="field__label picker__label">实际完成时间</view>
+          <view class="row">
+            <text class="field__value t-mono {{form.actualCompleteTime ? '' : 'field__value--empty'}}">
+              {{form.actualCompleteTime || '未完成'}}
+            </text>
+            <text class="field__arrow">›</text>
+          </view>
+        </view>
+      </picker>
+    </view>
+
+    <!-- ── 协办人 ────────────────────────────────────────────────── -->
+    <view class="card">
+      <view class="field--picker" bindtap="onToggleMemberPanel">
+        <view class="field__label picker__label">协办人（{{collaboratorIds.length}} 人）</view>
+        <view class="row">
+          <text class="field__value">{{memberPanelOpen ? '收起' : '管理'}}</text>
+          <text class="field__arrow">{{memberPanelOpen ? '⌄' : '›'}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{memberPanelOpen}}" class="edit__members">
+        <view
+          wx:for="{{allMembers}}"
+          wx:key="_id"
+          class="edit__member hit {{collaboratorIds.indexOf(item.openid) !== -1 ? 'edit__member--on' : ''}}"
+          data-openid="{{item.openid}}"
+          bindtap="onToggleMember"
+        >
+          <view class="flex-1">
+            <text class="edit__member-name">{{item.name}}</text>
+            <text wx:if="{{item.dept}}" class="t-muted edit__member-dept">{{item.dept}}</text>
+          </view>
+          <view wx:if="{{collaboratorIds.indexOf(item.openid) !== -1}}" class="edit__member-check">✓</view>
+        </view>
+      </view>
+    </view>
+
+    <!--
+      主办人不可改：leaderId 是权限判定的根基，换主办人等于转移任务所有权，
+      不在本期需求范围内。需要换人时由管理员重建任务。
+    -->
+    <view class="card card--flat">
+      <view class="row row--between">
+        <text class="t-muted">主办人</text>
+        <text class="t-sub">{{task.leader}}</text>
+      </view>
+    </view>
+  </block>
+</view>
+
+<view wx:if="{{!loading}}" class="footer-bar">
+  <view class="row edit__footer">
+    <button class="btn btn--plain edit__reset" bindtap="onReset" disabled="{{!dirtyCount}}">
+      还原
+    </button>
+    <button
+      class="btn btn--primary flex-1"
+      loading="{{saving}}"
+      disabled="{{saving || !dirtyCount}}"
+      bindtap="onSubmit"
+    >{{dirtyCount ? '保存（' + dirtyCount + ' 项修改）' : '保存'}}</button>
+  </view>
+</view>

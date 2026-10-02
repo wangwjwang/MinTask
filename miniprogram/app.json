@@ -1,0 +1,50 @@
+{
+  "pages": [
+    "pages/claim/index",
+    "pages/report/index",
+    "pages/update/index",
+    "pages/board/index",
+    "pages/people/index",
+    "pages/progress-add/index",
+    "pages/task-create/index",
+    "pages/join/index",
+    "pages/task-edit/index",
+    "pages/task-detail/index",
+    "pages/person-detail/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTitleText": "TeamPulse",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f4f5f7"
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#2b6cff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/report/index",
+        "text": "报任务"
+      },
+      {
+        "pagePath": "pages/update/index",
+        "text": "改任务"
+      },
+      {
+        "pagePath": "pages/board/index",
+        "text": "任务看板"
+      },
+      {
+        "pagePath": "pages/people/index",
+        "text": "人员看板"
+      }
+    ]
+  },
+  "requiredPrivateInfos": [],
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

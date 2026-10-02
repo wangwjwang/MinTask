@@ -1,0 +1,184 @@
+<!-- pages/task-detail 任务详情 -->
+<view class="page page--with-footer">
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载…</view>
+
+  <block wx:elif="{{task}}">
+
+    <!-- ── 任务信息 ─────────────────────────────────────────────── -->
+    <view class="card detail__head {{task._hasBlocker ? 'card--blocked' : ''}}">
+      <view class="row row--between">
+        <view class="flex-1 t-title" bindlongpress="onCopyTaskName">{{task.task_name}}</view>
+        <view class="badge badge--{{task._priorityTone}}">{{task.priority}}</view>
+      </view>
+
+      <view class="row row--wrap detail__tags">
+        <view class="badge badge--{{task._statusTone}}">{{task.status}}</view>
+        <view class="badge badge--{{task._stageTone}}">{{task.stage}}</view>
+        <view wx:if="{{task.origin === 'periodic'}}" class="tag">周期生成</view>
+        <view wx:if="{{task._hasBlocker}}" class="blocker-flag">卡壳</view>
+      </view>
+
+      <view class="detail__progress">
+        <view class="row row--between detail__progress-head">
+          <text class="t-muted">进度</text>
+          <text class="t-mono t-sub">{{task._progressWidth}}%</text>
+        </view>
+        <view class="progress">
+          <view
+            class="progress__bar {{task.stage === '已完成' ? 'progress__bar--done' : ''}} {{task._overdue ? 'progress__bar--danger' : ''}}"
+            style="width: {{task._progressWidth}}%;"
+          ></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── 字段明细 ─────────────────────────────────────────────── -->
+    <view class="card">
+      <view class="detail__line">
+        <text class="detail__key">分类</text>
+        <text class="detail__val">{{task.category || '—'}}</text>
+      </view>
+      <view class="detail__line">
+        <text class="detail__key">来源</text>
+        <text class="detail__val">{{task.source || '—'}}</text>
+      </view>
+      <view class="detail__line">
+        <text class="detail__key">性质</text>
+        <text class="detail__val">{{task.taskType || '—'}}</text>
+      </view>
+      <view class="detail__line" wx:if="{{task.recurFreq}}">
+        <text class="detail__key">频率</text>
+        <text class="detail__val">{{task.recurFreq}}</text>
+      </view>
+      <view class="detail__line">
+        <text class="detail__key">截止</text>
+        <text class="detail__val detail__val--{{task._dueTone}}">{{task._dueText}}</text>
+      </view>
+      <view class="detail__line" wx:if="{{task.actualCompleteTime}}">
+        <text class="detail__key">实际完成</text>
+        <text class="detail__val">{{task.actualCompleteTime}}</text>
+      </view>
+      <view class="detail__line hit" bindtap="onLeaderTap">
+        <text class="detail__key">主办</text>
+        <view class="row">
+          <text class="detail__val detail__val--link">{{task.leader || '—'}}</text>
+          <text class="field__arrow">›</text>
+        </view>
+      </view>
+      <view class="detail__line">
+        <text class="detail__key">协办</text>
+        <text class="detail__val">{{task._collaboratorText}}</text>
+      </view>
+      <view class="detail__line detail__line--block" wx:if="{{task.detail}}">
+        <text class="detail__key">任务详情</text>
+        <text class="detail__para">{{task.detail}}</text>
+      </view>
+    </view>
+
+    <!-- ── 进展时间线 ───────────────────────────────────────────── -->
+    <view class="section-title">
+      <text>进展记录</text>
+      <text class="section-title__count">{{records.length}} 条</text>
+    </view>
+
+    <empty-state
+      wx:if="{{!records.length}}"
+      title="还没有进展记录"
+      hint="{{canReport ? '点下方按钮上报第一条进展' : '主办人还未上报进展'}}"
+    />
+
+    <view wx:else class="timeline">
+      <view
+        wx:for="{{records}}"
+        wx:key="_id"
+        class="card record {{item._hasBlocker ? 'record--blocker' : ''}} {{item._resolved ? 'record--resolved' : ''}}"
+      >
+        <!-- 头：提交人 + 时间 -->
+        <view class="row row--between record__head">
+          <view class="row">
+            <text class="record__who">{{item.updaterName || item.updater || '—'}}</text>
+            <text wx:if="{{item._isMine}}" class="tag record__mine">我</text>
+          </view>
+          <text class="t-muted" title="{{item._fullTime}}">{{item._timeText}}</text>
+        </view>
+
+        <!-- 进展描述 -->
+        <view wx:if="{{item.description}}" class="record__desc">{{item.description}}</view>
+
+        <!-- 卡壳 -->
+        <view wx:if="{{item._hasBlocker}}" class="record__block">
+          <view class="row row--between">
+            <text class="record__block-label">
+              卡壳{{item._resolved ? '（已解决）' : ''}}
+            </text>
+            <view
+              wx:if="{{item._canResolve}}"
+              class="btn btn--sm btn--ghost record__resolve"
+              data-id="{{item._id}}"
+              bindtap="onResolveBlocker"
+            >标记已解决</view>
+          </view>
+          <text class="record__block-text">{{item.blocker}}</text>
+        </view>
+
+        <!-- 需要支持 -->
+        <view wx:if="{{item.needSupport}}" class="record__need">
+          <text class="record__need-label">需要支持</text>
+          <text class="record__need-text">{{item.needSupport}}</text>
+        </view>
+
+        <!--
+          本次提交同时改动的任务字段。
+          ★ 读 appliedChanges 而不是读 item.status —— 后者是任务当时的快照，
+            每条记录都有值，直接渲染会让每条进展都显示"状态 正常"，
+            看上去像是这条进展改了状态，实际没有。
+        -->
+        <view
+          wx:if="{{item.appliedChanges.progress !== undefined || item.appliedChanges.status || item.appliedChanges.stage}}"
+          class="row row--wrap record__diff"
+        >
+          <text
+            wx:if="{{item.appliedChanges.progress !== undefined && item.appliedChanges.progress !== null}}"
+            class="tag"
+          >进度 → {{item.appliedChanges.progress}}%</text>
+          <text wx:if="{{item.appliedChanges.status}}" class="tag">状态 → {{item.appliedChanges.status}}</text>
+          <text wx:if="{{item.appliedChanges.stage}}" class="tag">阶段 → {{item.appliedChanges.stage}}</text>
+        </view>
+      </view>
+    </view>
+
+  </block>
+
+  <!-- ── 底部操作栏 ─────────────────────────────────────────────── -->
+  <view wx:if="{{task}}" class="footer-bar">
+    <!-- 未解决卡壳提示 -->
+    <view wx:if="{{openBlockerCount}}" class="detail__alert">
+      有 {{openBlockerCount}} 项未解决的卡壳
+    </view>
+
+    <view class="row detail__actions">
+      <view wx:if="{{canReport}}" class="btn btn--primary flex-1 hit" bindtap="onReport">
+        上报进展
+      </view>
+      <view wx:if="{{canEdit}}" class="btn btn--plain detail__edit hit" bindtap="onEdit">
+        编辑任务
+      </view>
+      <view wx:if="{{canJoin}}" class="btn btn--ghost flex-1 hit" bindtap="onJoin">
+        加入协办
+      </view>
+      <view wx:if="{{canLeave}}" class="btn btn--plain flex-1 hit" bindtap="onLeave">
+        退出协办
+      </view>
+      <view wx:if="{{isAdmin}}" class="btn btn--danger detail__del hit" bindtap="onDelete">
+        删除
+      </view>
+    </view>
+
+    <!-- 既非主办也非协办、又不能加入（任务已完成）时的说明 -->
+    <view
+      wx:if="{{!canReport && !canJoin && !isAdmin}}"
+      class="t-muted detail__hint"
+    >该任务已完成，你不在协作名单中，只能查看。</view>
+  </view>
+</view>

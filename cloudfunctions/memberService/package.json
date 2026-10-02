@@ -1,0 +1,10 @@
+{
+  "name": "memberService",
+  "version": "1.0.0",
+  "description": "成员身份服务：认领、查询、管理员维护",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

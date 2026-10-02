@@ -1,0 +1,207 @@
+/* pages/task-detail */
+
+/* ── 任务信息卡 ── */
+
+.detail__tags {
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.detail__progress {
+  margin-top: 20rpx;
+}
+
+.detail__progress-head {
+  margin-bottom: 10rpx;
+}
+
+/* ── 字段明细 ── */
+
+.detail__line {
+  display: flex;
+  align-items: flex-start;
+  padding: 18rpx 0;
+  border-bottom: 2rpx solid var(--divider);
+}
+
+.detail__line:last-child {
+  border-bottom: none;
+}
+
+.detail__line--block {
+  display: block;
+}
+
+.detail__key {
+  width: 160rpx;
+  flex-shrink: 0;
+  font-size: 26rpx;
+  color: var(--muted);
+}
+
+.detail__val {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.detail__val--link {
+  color: var(--primary);
+}
+
+.detail__val--danger {
+  color: var(--tone-danger);
+  font-weight: 600;
+}
+
+.detail__val--warn {
+  color: var(--tone-warn);
+  font-weight: 600;
+}
+
+.detail__val--done {
+  color: var(--muted);
+}
+
+.detail__para {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: var(--text-sub);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── 进展时间线 ── */
+
+.timeline {
+  padding-bottom: 8rpx;
+}
+
+.record {
+  border-left: 6rpx solid var(--border);
+}
+
+/* 有卡壳的记录用红条，已解决则转灰 —— 让时间线一眼扫出问题条目 */
+.record--blocker {
+  border-left-color: var(--tone-danger);
+}
+
+.record--resolved {
+  border-left-color: var(--tone-ok);
+  opacity: 0.75;
+}
+
+.record__head {
+  margin-bottom: 12rpx;
+}
+
+.record__who {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.record__mine {
+  margin-left: 12rpx;
+}
+
+.record__desc {
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.record__block {
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  border-radius: var(--radius-sm);
+  background: var(--tone-danger-bg);
+}
+
+.record--resolved .record__block {
+  background: var(--tone-ok-bg);
+}
+
+.record__block-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--tone-danger);
+}
+
+.record--resolved .record__block-label {
+  color: var(--tone-ok);
+}
+
+.record__block-text {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.record__resolve {
+  height: 52rpx;
+  font-size: 22rpx;
+  padding: 0 20rpx;
+}
+
+.record__need {
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  border-radius: var(--radius-sm);
+  background: var(--tone-warn-bg);
+}
+
+.record__need-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--tone-warn);
+}
+
+.record__need-text {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.record__diff {
+  gap: 10rpx;
+  margin-top: 16rpx;
+}
+
+/* ── 底部操作栏 ── */
+
+.detail__alert {
+  padding: 12rpx 20rpx;
+  margin-bottom: 14rpx;
+  border-radius: var(--radius-sm);
+  background: var(--tone-danger-bg);
+  color: var(--tone-danger);
+  font-size: 24rpx;
+  text-align: center;
+}
+
+.detail__actions {
+  gap: 16rpx;
+}
+
+.detail__edit,
+.detail__del {
+  width: 160rpx;
+  flex-shrink: 0;
+}
+
+.detail__hint {
+  margin-top: 14rpx;
+  text-align: center;
+}

@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "任务看板",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "task-card": "/components/task-card/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}

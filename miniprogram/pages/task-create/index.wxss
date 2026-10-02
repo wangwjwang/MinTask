@@ -1,18 +1,9 @@
 /* pages/task-create */
 
 /*
- * picker 包裹的 .field--picker 需要撑满宽度；
- * .picker__label 由 field-picker 组件定义，这里补一份供本页内联使用。
+ * .field--picker / .picker__label 已上提到 app.wxss ——
+ * 本页原先抄了一份和 field-picker 组件完全相同的定义，现已删除。
  */
-.field--picker {
-  width: 100%;
-}
-
-.picker__label {
-  flex: 1;
-  margin-bottom: 0;
-  margin-right: 24rpx;
-}
 
 .create__self-tag {
   margin-left: 12rpx;

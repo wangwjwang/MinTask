@@ -3,10 +3,15 @@
 .task-card {
   position: relative;
   background: var(--card);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   padding: var(--gap);
   margin-bottom: var(--gap-sm);
-  box-shadow: 0 2rpx 12rpx rgba(16, 24, 40, 0.04);
+  /*
+   * ★ 无阴影。卡片靠 --bg 与 --card 的底色对比从背景里浮起来。
+   *   v1 这里压着 0 2rpx 12rpx rgba(16,24,40,.04) —— 「每张卡下垫一层软灰影」
+   *   是通用卡片套件最典型的特征，去掉后更干净。
+   *   与同样有阴影的 .card / .ptabs 保持一致。
+   */
 }
 
 .task-card__head {
@@ -14,9 +19,34 @@
   align-items: flex-start;
 }
 
+/*
+ * 分类色方块 + 任务名。
+ * 方块贴在标题首行的**左边缘**，竖列扫读时 11 个分类会在同一条竖直位置上
+ * 形成颜色带 —— 这是分类色唯一真正好用的位置。
+ *
+ * ★ 不放在卡片左边缘：那里已经被 .card--blocked 的红色左边线占了，
+ *   两个颜色会直接打架。
+ */
+.task-card__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.task-card__dot {
+  /* 与标题首行的视觉中线对齐：
+     （34rpx 字号 × 1.5 行高 − 16rpx 方块高度）÷ 2 ≈ 18rpx */
+  margin-top: 18rpx;
+}
+
+.task-card__name {
+  flex: 1;
+  min-width: 0;
+}
+
 .task-card__source {
   flex-shrink: 0;
-  margin-top: 4rpx;
+  margin-top: 6rpx;
 }
 
 .task-card__tags {
@@ -32,19 +62,28 @@
   margin-bottom: 10rpx;
 }
 
+/*
+ * 底部一行：分类 · 主办 · 协办        截止日
+ * v1 是最多三行，压成一行后卡片变矮、列表更清爽。
+ * 左侧片段用 flex-1 + ellipsis，右侧截止日不压缩 —— 截止日不能被省略号吃掉。
+ */
 .task-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
   margin-top: 20rpx;
   padding-top: 16rpx;
   border-top: 2rpx solid var(--divider);
 }
 
-.task-card__meta-line {
-  min-height: 36rpx;
+.task-card__meta-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .task-card__due {
   flex-shrink: 0;
-  margin-left: 16rpx;
 }
 
 .task-card__due--danger {
@@ -57,4 +96,13 @@
 
 .task-card__due--done {
   color: var(--tone-done);
+}
+
+/*
+ * dueInfo() 在「未设置」和「3 天以外」时返回 idle。
+ * v1 漏定义了这个类，靠继承 .t-muted 的颜色兜住了，观感是对的；
+ * 补上只是把意图写明，避免以后有人改了 .t-muted 反而弄坏这里。
+ */
+.task-card__due--idle {
+  color: var(--muted);
 }

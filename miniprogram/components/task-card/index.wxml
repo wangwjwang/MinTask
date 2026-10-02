@@ -1,16 +1,22 @@
 <!--
   components/task-card
-  任务卡片。所有展示用的派生字段（_dueText / _statusTone / _hasBlocker 等）
+  任务卡片。所有展示用的派生字段（_dueText / _statusTone / _catColor 等）
   都由 utils/format.js 的 decorateTask 预先算好，这里只负责渲染。
+
+  ★ _catColor 必须是 decorateTask 产出的十六进制字面量 —— WXML 不能调 JS 函数，
+    所以分类色只能这样内联给出，不能在模板里现算。
 -->
 <view
   wx:if="{{task}}"
   class="task-card hit {{task._hasBlocker ? 'card--blocked' : ''}}"
   bindtap="onTap"
 >
-  <!-- 第一行：任务名 + 任务来源 -->
+  <!-- 第一行：分类色方块 + 任务名 + 任务来源 -->
   <view class="row row--between task-card__head">
-    <view class="flex-1 t-title ellipsis-2">{{task.task_name}}</view>
+    <view class="flex-1 task-card__title">
+      <view class="chip__dot task-card__dot" style="background: {{task._catColor}}"></view>
+      <view class="t-title ellipsis-2 task-card__name">{{task.task_name}}</view>
+    </view>
     <view wx:if="{{task.source}}" class="tag task-card__source">{{task.source}}</view>
   </view>
 
@@ -38,19 +44,13 @@
     </view>
   </view>
 
-  <!-- 底部：分类 / 截止 / 主办 / 协办 -->
+  <!--
+    底部一行：分类 · 主办 · 协办                      截止日
+    v1 这里是最多三行（分类 / 主办 / 协办 各占一行），压成一行后
+    卡片变矮、列表更清爽。三个片段按 props 条件拼接。
+  -->
   <view class="task-card__meta">
-    <view class="row row--between task-card__meta-line">
-      <text class="t-muted ellipsis">{{task.category}}</text>
-      <text class="t-muted t-mono task-card__due task-card__due--{{task._dueTone}}">{{task._dueText}}</text>
-    </view>
-
-    <view wx:if="{{showLeader}}" class="row task-card__meta-line">
-      <text class="t-muted">主办：{{task.leader || '—'}}</text>
-    </view>
-
-    <view wx:if="{{showCollaborators}}" class="row task-card__meta-line">
-      <text class="t-muted ellipsis">协办：{{task._collaboratorText}}</text>
-    </view>
+    <text class="t-muted ellipsis task-card__meta-text">{{task.category}}{{showLeader && task.leader ? ' · 主办 ' + task.leader : ''}}{{showCollaborators ? ' · 协办 ' + task._collaboratorText : ''}}</text>
+    <text class="t-muted t-mono task-card__due task-card__due--{{task._dueTone}}">{{task._dueText}}</text>
   </view>
 </view>

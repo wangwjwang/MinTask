@@ -1,15 +1,16 @@
 /* components/field-picker */
 
 /*
- * field--picker 在 app.wxss 里是 flex + space-between，
- * 但这里外层多了一个 picker 标签，所以把标签行单独撑开。
+ * 这里**刻意是空的**。
+ *
+ * 本组件原先定义了 .field--picker { width: 100% } 和 .picker__label，
+ * 而 task-create / task-edit 两个页面各自又抄了一份完全相同的规则 ——
+ * 因为组件的样式不会外流到页面，页面给自定义内联 picker 写的那份是必需的，
+ * 于是同一份定义在仓库里有三份，改一处必漏两处。
+ *
+ * 现已上提到 app.wxss 的「表单」段。全局类能穿透进组件（本组件开了
+ * addGlobalClass），页面也能直接用，一处定义三处生效。
+ *
+ * ★ 以后本组件要加样式时注意：组件自有样式只作用于组件内部，
+ *   凡是要和页面内联元素共用的，都放 app.wxss。
  */
-.field--picker {
-  width: 100%;
-}
-
-.picker__label {
-  flex: 1;
-  margin-bottom: 0;
-  margin-right: 24rpx;
-}

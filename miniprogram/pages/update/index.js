@@ -37,6 +37,16 @@ Page({
     filterStage: '',
     stageOptions: ['全部'].concat(STAGE),
     stageValues: [''].concat(STAGE),
+
+    /** 页内信息块用的当前用户姓名。姓名是快照，不参与权限判断 */
+    myName: '',
+    /**
+     * 信息块数字。
+     * ★ 只数「在办」：已完成的任务不再需要改动，把逾期算进去会虚增待办量，
+     *   让页顶的数字吓人却没意义。（format.dueInfo 对已完成本就强制 overdue=false，
+     *   这里再限定一遍是双保险 —— 不依赖下游实现细节。）
+     */
+    stats: { open: 0, overdue: 0 },
   },
 
   onLoad() {
@@ -65,10 +75,17 @@ Page({
       const led = await db.myLedTasks(session.openid);
       const all = fmt.decorateTasks(led);
 
+      const openTasks = all.filter((t) => t.stage !== '已完成');
+
       this.setData({
         tasks: all,
-        openTasks: all.filter((t) => t.stage !== '已完成'),
+        openTasks,
         doneTasks: all.filter((t) => t.stage === '已完成'),
+        myName: (session.member && session.member.name) || '',
+        stats: {
+          open: openTasks.length,
+          overdue: openTasks.filter((t) => t._overdue).length,
+        },
         loading: false,
       });
       // this.data 在 setData 后同步生效，这里能安全读到刚写入的字段

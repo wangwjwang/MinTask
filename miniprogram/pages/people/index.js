@@ -33,8 +33,6 @@ Page({
     myOpenid: '',
     /** 只有管理员能看到「重新关联历史数据」入口 */
     isAdmin: false,
-    /** 只看我 / 全部 */
-    onlyMine: false,
   },
 
   onLoad() {
@@ -119,10 +117,6 @@ Page({
         toast.error('加载人员列表失败，请下拉重试');
       }
     }
-  },
-
-  onToggleMine() {
-    this.setData({ onlyMine: !this.data.onlyMine });
   },
 
   onMemberTap(e) {

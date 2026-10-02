@@ -1,12 +1,13 @@
 /* pages/update */
 
+/* 阶段筛选胶囊的外观在 app.wxss 的 .filter-pill 里（与任务看板共用），
+   这里只补本页的外边距 */
 .update__filter {
   margin-bottom: var(--gap);
 }
 
-.update__filter-value {
-  margin-left: 16rpx;
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--primary);
+/* 逾期数只在大于 0 时才带上这个类（见 index.wxml）。
+   未逾期时保持 .summary__stats 的中性灰，不制造无谓的警报色。 */
+.update__overdue {
+  color: var(--tone-danger);
 }

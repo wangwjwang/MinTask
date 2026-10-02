@@ -1,15 +1,12 @@
 /* pages/people 人员看板 */
 
-.people__bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4rpx 8rpx 16rpx;
-}
-
+/*
+ * 未认领人数是可点的（点了复制名单发给同事催认领），
+ * 所以在信息块里用主色 —— 主色在全站只表示"这个东西可以点"。
+ * 原先用的 --tone-warn 是"有风险"的语义，认领还没完成不算是风险。
+ */
 .people__unclaimed {
-  font-size: 24rpx;
-  color: var(--tone-warn);
+  color: var(--primary);
 }
 
 /* ── 管理员：重新关联历史数据 ── */

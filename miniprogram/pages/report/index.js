@@ -70,6 +70,14 @@ Page({
     showJoined: true,
     showDone: false,
     myOpenid: '',
+    /** 页内信息块用的当前用户姓名。来自 session.member 的快照，不参与权限判断 */
+    myName: '',
+    /**
+     * 信息块上的三个数字。
+     * ★ 刻意与下方三个分组标题上的计数完全同源（led/joined/doneAll 的长度），
+     *   这样页顶的数字在屏幕上一眼就能核对，不会出现"顶上写 5、底下写 4"。
+     */
+    stats: { led: 0, joined: 0, done: 0 },
   },
 
   onLoad() {
@@ -94,7 +102,11 @@ Page({
       return;
     }
 
-    this.setData({ myOpenid: session.openid });
+    this.setData({
+      myOpenid: session.openid,
+      // member 是姓名快照，仅用于展示；权限一律走 openid
+      myName: (session.member && session.member.name) || '',
+    });
 
     try {
       if (!this.data.led.length && !this.data.joined.length && !this.data.doneAll.length) {
@@ -109,13 +121,19 @@ Page({
 
       const l = splitByStage(led);
       const j = splitByStage(joined);
+      const doneAll = dedupeById(l.done.concat(j.done));
 
       this.setData({
         led: l.open,
         ledDone: l.done,
         joined: j.open,
         joinedDone: j.done,
-        doneAll: dedupeById(l.done.concat(j.done)),
+        doneAll,
+        stats: {
+          led: l.open.length,
+          joined: j.open.length,
+          done: doneAll.length,
+        },
         loading: false,
       });
     } catch (e) {

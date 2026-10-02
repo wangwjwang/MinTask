@@ -4,14 +4,26 @@
   <view wx:if="{{loading}}" class="loading-block">正在加载人员…</view>
 
   <block wx:else>
-    <!-- ── 顶部说明 ─────────────────────────────────────────────── -->
-    <view class="people__bar">
-      <text class="t-muted">共 {{members.length}} 人</text>
-      <view
-        wx:if="{{unclaimedCount}}"
-        class="people__unclaimed hit"
-        bindtap="onCopyUnclaimed"
-      >{{unclaimedCount}} 人未认领 · 点击复制</view>
+    <!--
+      ── 信息块 ───────────────────────────────────────────────────
+      导航栏已写「人员看板」，页内不再重复标题，放信息：总人数 + 认领情况。
+      认领进度是这一页唯一需要"管理"的事（未认领的人点不进任务），
+      所以它占信息块的位置，而不是缩在角落一行小字。
+    -->
+    <view class="summary">
+      <view class="summary__value">
+        <text>共 {{members.length}}</text>
+        <text class="summary__unit">人</text>
+      </view>
+      <view class="summary__stats">
+        <text wx:if="{{unclaimedCount}}">已认领 {{claimedCount}}</text>
+        <text
+          wx:if="{{unclaimedCount}}"
+          class="people__unclaimed hit"
+          bindtap="onCopyUnclaimed"
+        >待认领 {{unclaimedCount}} · 点击复制名单</text>
+        <text wx:else>全部已认领</text>
+      </view>
     </view>
 
     <!-- 导入历史任务表后，把只有姓名、还没挂 openid 的任务/进展补上归属。
@@ -40,7 +52,7 @@
       data-name="{{item.name}}"
       bindtap="onMemberTap"
     >
-      <!-- 头像占位：取姓名末两字，避免引入图片资源 -->
+      <!-- 头像占位：直接渲染整个姓名（两三个字），避免引入图片资源 -->
       <view class="member__avatar {{item.claimed ? '' : 'member__avatar--off'}}">
         {{item.name}}
       </view>

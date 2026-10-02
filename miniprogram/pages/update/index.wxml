@@ -1,15 +1,24 @@
 <!-- pages/update Tab2 改任务 -->
 <view class="page">
 
+  <!--
+    ── 信息块 ─────────────────────────────────────────────────────
+    导航栏已写「改任务」，页内不再重复标题，放信息：姓名 + 在办/逾期。
+    ★ 逾期为 0 时不标红 —— 天天报警的数字很快就没人看了。
+      标红只在真的有事要处理时出现。
+  -->
+  <view class="summary">
+    <view class="summary__value">{{myName}}</view>
+    <view class="summary__stats">
+      <text>在办 {{stats.open}}</text>
+      <text class="{{stats.overdue ? 'update__overdue' : ''}}">逾期 {{stats.overdue}}</text>
+    </view>
+  </view>
+
   <picker mode="selector" range="{{stageOptions}}" bindchange="onFilterChange">
-    <view class="card card--flat update__filter hit">
-      <view class="row row--between">
-        <view class="row">
-          <text class="t-sub">阶段筛选</text>
-          <text class="update__filter-value">{{filterStage || '全部'}}</text>
-        </view>
-        <text class="field__arrow">›</text>
-      </view>
+    <view class="filter-pill update__filter hit">
+      <text class="filter-pill__label">{{filterStage || '全部'}}</text>
+      <text class="filter-pill__arrow">▾</text>
     </view>
   </picker>
 

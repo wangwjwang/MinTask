@@ -290,7 +290,15 @@ generatePeriodicTasks   callAI   notifyService
 | `generatePeriodicTasks` | **60 秒** | 256 MB | 默认 3 秒，批量生成多个模板会超时 |
 | `callAI` | **20 秒** | 256 MB | 内部 HTTP 超时 8 秒，留出云函数冷启动余量 |
 | `memberService` | **20 秒** | 256 MB | 见下：认领时要顺带关联历史数据，不是单文档操作 |
+| `templateService` | **60 秒** | 256 MB | 单文档增删改 3 秒够用，但 `generateNow` / `preview` 会整批生成任务 |
 | 其余函数 | 默认 3 秒 | 256 MB | 都是单文档操作，够用 |
+
+> ★ **`templateService` 现在按 60 秒配，是给以后留的余量。**
+> 它的 `generateNow`（手动补跑）和 `preview`（只看不写）会和定时任务跑同一套
+> 生成逻辑，批量大的时候 3 秒必然不够。这两个 action 目前没有界面入口
+> （见 `docs/SETUP-FROM-SCRATCH.md` 第 7.6 节），但只要哪天加了按钮，
+> 忘了改超时就会**中途超时**、生成一半 —— 比直接报错更难查。
+> 现在先配上，成本为零。
 
 > ★ **`memberService` 必须调超时**。它除了认领还要跑「历史数据关联」：
 > 要全量扫描 `tasks` 与 `progress_records`，再逐个 `update` 回填 `leaderId` /
@@ -856,7 +864,7 @@ Web 端接入时：
 - [ ] 导入的每条记录都**显式含** `openid: ""`（在控制台点开一条确认，不能是"无此字段"）
 - [ ] 名单里至少有一个人 `role` 是 `管理员`
 - [ ] 7 个云函数已上传部署
-- [ ] `generatePeriodicTasks` 超时调至 60s，`callAI` 与 `memberService` 调至 20s
+- [ ] `generatePeriodicTasks` 与 `templateService` 超时调至 60s，`callAI` 与 `memberService` 调至 20s
 - [ ] `generatePeriodicTasks` 的定时触发器已生效
 - [ ] 验证：小程序端直连 `tasks.add()` 被拒绝（证明安全规则生效）
 - [ ] 验证：两个账号同时认领同一人，只有一个成功

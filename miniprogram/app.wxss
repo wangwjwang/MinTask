@@ -1,55 +1,91 @@
 /**
  * miniprogram/app.wxss
  * ---------------------------------------------------------------------------
- * 全局样式。分三层：
- *   1. 设计令牌（CSS 变量）—— 颜色/圆角/间距只在这里定义一次
+ * 全局样式。分四层：
+ *   1. 设计令牌（CSS 变量）—— 颜色/圆角/间距/字号只在这里定义一次
  *   2. 基础布局类      —— .page / .card / .row 等骨架
  *   3. 组件类          —— .badge / .btn / .field 等可复用件
+ *   4. 页面件          —— .summary / .seg / .pill / .chip 等页面级构件
  *
  * ★ 页面 WXSS 里不要再写死颜色值，一律用 var(--xxx)。
  *   否则改主题时要满项目搜索替换，必然漏。
+ *
+ * ★ 设计取向（v2）：结构学 1Password，手感学 IKEA。
+ *   - 颜色稀缺：主色是**全站唯一的高饱和色**，只出现在实心按钮 / 当前页签 /
+ *     可点链接上。状态色（红/黄/绿/蓝）语义不变，分类色只做小方块。
+ *   - 区域靠底色对比分层，**全站不使用阴影**。阴影是通用卡片套件最典型的
+ *     特征，去掉后更干净，也更接近参考图。
+ *
+ * ★ 与 utils/theme.js 的关系：分类色与主色在那份 JS 里也有一份。
+ *   CSS 变量够不到 `<slider activeColor>`（只吃十六进制字面量），所以不得不
+ *   重复。改主色或分类色时必须两处同改。
  * ---------------------------------------------------------------------------
  */
 
 page {
-  /* ── 主色 ── */
-  --primary: #2b6cff;
-  --primary-soft: #eaf1ff;
-  --primary-dark: #1b52d0;
+  /* ── 主色 ── 全站唯一的高饱和色 */
+  --primary: #2563EB;
+  --primary-soft: #E8EFFC;
+  --primary-dark: #1D4FC4;
+  /* 「选中态背景」的语义别名。目前等同主色浅底，单独命名是为了防止
+     以后有人把 --primary-soft 当成通用装饰底色去用 */
+  --selected-bg: var(--primary-soft);
 
-  /* ── 中性色 ── */
-  --bg: #f4f5f7;
-  --card: #ffffff;
-  --text: #1a1d24;
-  --text-sub: #5b6270;
-  --muted: #8a8f99;
-  --border: #e8eaee;
-  --divider: #f0f1f4;
+  /* ── 中性色 ── 底色带一丝暖意，刻意避开偏蓝的"后台管理系统灰" */
+  --bg: #F5F3F1;
+  --card: #FFFFFF;
+  --text: #1A1D24;
+  --text-sub: #5B6270;
+  --muted: #8A8F99;
+  --placeholder: #B8BCC4;
+  /* 实心主色/危险色按钮上的文字色 */
+  --on-solid: #FFFFFF;
+  --border: #E9E7E4;
+  --divider: #F2F0ED;
 
-  /* ── 语义色（对应 constants.js 的 *_TONE）── */
-  --tone-ok: #12a150;
-  --tone-ok-bg: #e7f7ee;
-  --tone-warn: #d97706;
-  --tone-warn-bg: #fef4e6;
-  --tone-danger: #dc2626;
-  --tone-danger-bg: #fdeceb;
-  --tone-active: #2b6cff;
-  --tone-active-bg: #eaf1ff;
-  --tone-done: #6b7280;
-  --tone-done-bg: #eef0f3;
-  --tone-idle: #6b7280;
-  --tone-idle-bg: #eef0f3;
+  /* ── 语义色（对应 shared/constants.js 的 *_TONE）──
+     ★ 语义与 v1 完全一致，本次重构只调色值不改归属：
+       红＝受阻/逾期，黄＝有风险/临期，绿＝已完成，蓝＝进行中 */
+  --tone-ok: #12A150;
+  --tone-ok-bg: #E7F7EE;
+  --tone-warn: #D97706;
+  --tone-warn-bg: #FEF4E6;
+  --tone-danger: #DC2626;
+  --tone-danger-bg: #FDECEB;
+  /* 卡壳标记的描边。原来写死 rgba(220,38,38,.25)，现在从主色派生 */
+  --tone-danger-border: rgba(220, 38, 38, 0.25);
+  --tone-active: #2563EB;
+  --tone-active-bg: #E8EFFC;
+  --tone-done: #6B7280;
+  --tone-done-bg: #EEF0F3;
+  --tone-idle: #6B7280;
+  --tone-idle-bg: #EEF0F3;
 
-  /* ── 尺寸 ── */
-  --radius: 16rpx;
-  --radius-sm: 8rpx;
-  --radius-lg: 24rpx;
-  --gap: 24rpx;
+  /* ── 圆角 ── */
+  --radius-sm: 12rpx;
+  --radius: 24rpx;
+  --radius-lg: 32rpx;
+  --radius-full: 999rpx;
+
+  /* ── 间距 ── */
   --gap-sm: 16rpx;
+  --gap: 28rpx;
+  --gap-lg: 40rpx;
+
+  /* ── 字号 ──
+     v1 的字号全挤在 22–32rpx 之间，没有层级。这里拉开差距。
+     ★ 中文不加负字距：参考图的紧排是拉丁字母的排版手法，
+       汉字施加负字距会让字面互相挤压。 */
+  --fs-hero: 52rpx;
+  --fs-title: 34rpx;
+  --fs-body: 28rpx;
+  --fs-sub: 26rpx;
+  --fs-caption: 24rpx;
+  --fs-micro: 22rpx;
 
   background: var(--bg);
   color: var(--text);
-  font-size: 28rpx;
+  font-size: var(--fs-body);
   line-height: 1.5;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
 }
@@ -66,19 +102,18 @@ page {
 
 /* 底部有固定操作栏的页面用它，避免内容被按钮盖住 */
 .page--with-footer {
-  padding-bottom: 180rpx;
+  padding-bottom: 200rpx;
 }
 
+/* 卡片：靠底色对比从背景里浮起来，**不用阴影** */
 .card {
   background: var(--card);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   padding: var(--gap);
   margin-bottom: var(--gap-sm);
-  box-shadow: 0 2rpx 12rpx rgba(16, 24, 40, 0.04);
 }
 
 .card--flat {
-  box-shadow: none;
   border: 2rpx solid var(--border);
 }
 
@@ -110,18 +145,18 @@ page {
    ───────────────────────────────────────────────────────────────────────── */
 
 .t-title {
-  font-size: 32rpx;
+  font-size: var(--fs-title);
   font-weight: 600;
   color: var(--text);
 }
 
 .t-sub {
-  font-size: 26rpx;
+  font-size: var(--fs-sub);
   color: var(--text-sub);
 }
 
 .t-muted {
-  font-size: 24rpx;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 
@@ -150,27 +185,28 @@ page {
   align-items: center;
   justify-content: space-between;
   padding: 8rpx 4rpx 16rpx;
-  font-size: 28rpx;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text);
 }
 
 .section-title__count {
-  font-size: 24rpx;
+  font-size: var(--fs-caption);
   font-weight: 400;
   color: var(--muted);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
    徽标 —— 配色 key 来自 shared/constants.js 的 *_TONE
+   形式是「浅底 + 深字」的胶囊，与分类标记的「实心小方块」刻意区分开
    ───────────────────────────────────────────────────────────────────────── */
 
 .badge {
   display: inline-flex;
   align-items: center;
   padding: 4rpx 14rpx;
-  border-radius: 999rpx;
-  font-size: 22rpx;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-micro);
   line-height: 1.6;
   white-space: nowrap;
 }
@@ -209,7 +245,7 @@ page {
 
 .btn--primary {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-solid);
 }
 
 .btn--primary:active {
@@ -230,7 +266,7 @@ page {
 
 .btn--danger {
   background: var(--tone-danger);
-  color: #fff;
+  color: var(--on-solid);
 }
 
 .btn[disabled],
@@ -240,7 +276,7 @@ page {
 
 .btn--sm {
   height: 64rpx;
-  font-size: 26rpx;
+  font-size: var(--fs-sub);
   padding: 0 24rpx;
 }
 
@@ -270,7 +306,7 @@ page {
 }
 
 .field__label {
-  font-size: 26rpx;
+  font-size: var(--fs-sub);
   color: var(--text-sub);
   margin-bottom: 12rpx;
 }
@@ -296,14 +332,24 @@ page {
 }
 
 .field__placeholder {
-  color: #b8bcc4;
+  color: var(--placeholder);
 }
 
-/* 可点击的选择行（右侧带箭头） */
+/*
+ * 可点击的选择行（右侧带箭头）
+ *
+ * ★ width: 100% 是必需的：这个行通常被包在 <picker> 里，而 picker 是行内块，
+ *   flex 容器不撑开就会缩成内容宽度。
+ *   放在全局而不是各页面，是因为 field-picker 组件的样式不外流到页面
+ *   （样式隔离单向），而全局类能穿透进组件（组件都开了 addGlobalClass）。
+ *   这样组件内和页面内联的 picker 行共用同一份定义，不必各抄一遍。
+ */
 .field--picker {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
   padding: 28rpx 0;
   border-bottom: 2rpx solid var(--divider);
 }
@@ -312,18 +358,25 @@ page {
   background: var(--divider);
 }
 
+/* picker 行左侧的标签。flex:1 让值靠右，margin 清掉 .field__label 的下边距 */
+.picker__label {
+  flex: 1;
+  margin-bottom: 0;
+  margin-right: 24rpx;
+}
+
 .field__value {
   font-size: 30rpx;
   color: var(--text);
 }
 
 .field__value--empty {
-  color: #b8bcc4;
+  color: var(--placeholder);
 }
 
 .field__arrow {
   color: var(--muted);
-  font-size: 26rpx;
+  font-size: var(--fs-sub);
   margin-left: 12rpx;
 }
 
@@ -333,14 +386,14 @@ page {
 
 .progress {
   height: 12rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-full);
   background: var(--divider);
   overflow: hidden;
 }
 
 .progress__bar {
   height: 100%;
-  border-radius: 999rpx;
+  border-radius: var(--radius-full);
   background: var(--primary);
   transition: width 0.3s ease;
 }
@@ -363,21 +416,21 @@ page {
 }
 
 .empty__title {
-  font-size: 28rpx;
+  font-size: var(--fs-body);
   color: var(--muted);
   margin-bottom: 12rpx;
 }
 
 .empty__hint {
-  font-size: 24rpx;
-  color: #b8bcc4;
+  font-size: var(--fs-caption);
+  color: var(--placeholder);
 }
 
 .loading-block {
   padding: 80rpx;
   text-align: center;
   color: var(--muted);
-  font-size: 26rpx;
+  font-size: var(--fs-sub);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -389,11 +442,11 @@ page {
   align-items: center;
   gap: 6rpx;
   padding: 4rpx 14rpx;
-  border-radius: 999rpx;
-  font-size: 22rpx;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-micro);
   color: var(--tone-danger);
   background: var(--tone-danger-bg);
-  border: 2rpx solid rgba(220, 38, 38, 0.25);
+  border: 2rpx solid var(--tone-danger-border);
 }
 
 .card--blocked {
@@ -414,7 +467,7 @@ page {
   display: inline-block;
   padding: 2rpx 12rpx;
   border-radius: var(--radius-sm);
-  font-size: 22rpx;
+  font-size: var(--fs-micro);
   color: var(--text-sub);
   background: var(--divider);
 }
@@ -425,4 +478,181 @@ page {
 
 .hit:active {
   opacity: 0.6;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   页内信息块 —— 替代「页内大标题」
+
+   11 个页面全靠微信原生导航栏标题，页内再放一个「报任务」大标题会和导航栏
+   重复。所以这个位置放**信息**不放页面名：报任务是「姓名 + 统计」，人员看板
+   是「共 10 人」。导航栏给上下文，这里给内容。
+   （1Password 首页正是这个结构：导航层 Home，页内大标题 John Smith）
+   ───────────────────────────────────────────────────────────────────────── */
+
+.summary {
+  padding: 8rpx 4rpx var(--gap);
+}
+
+.summary__value {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+  font-size: var(--fs-hero);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.summary__unit {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--text-sub);
+}
+
+.summary__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6rpx 24rpx;
+  margin-top: 12rpx;
+  font-size: var(--fs-sub);
+  color: var(--muted);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   统计胶囊 —— 取自参考图 IKEA 顶部那排胶囊块
+   用于任务看板顶部的「共 61 项 / 卡壳 3 / 逾期 5」
+   ───────────────────────────────────────────────────────────────────────── */
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8rpx;
+  padding: 12rpx 24rpx;
+  border-radius: var(--radius-full);
+  background: var(--card);
+  font-size: var(--fs-caption);
+  color: var(--text-sub);
+}
+
+.pill__value {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.pill--danger .pill__value {
+  color: var(--tone-danger);
+}
+
+.pill--warn .pill__value {
+  color: var(--tone-warn);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   筛选胶囊 —— 包在 <picker> 里的当前筛选项
+   任务看板（分类）与改任务（阶段）共用。只定外观，外边距由各页面自定。
+   ★ width 不设 100%：picker 是行内元素，胶囊要缩成内容宽度才像个按钮，
+     撑满整行会看起来像一张卡片，失去"可点"的暗示。
+   ───────────────────────────────────────────────────────────────────────── */
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 12rpx 24rpx;
+  border-radius: var(--radius-full);
+  background: var(--selected-bg);
+  color: var(--primary);
+  font-size: var(--fs-sub);
+  font-weight: 500;
+}
+
+.filter-pill__label {
+  line-height: 1;
+}
+
+.filter-pill__arrow {
+  margin-left: 10rpx;
+  font-size: var(--fs-micro);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   分段切换 —— 取自参考图 IKEA 顶部「Rooms │ Products」页签
+   用于任务看板切换阶段。下划线指示当前项。
+   ───────────────────────────────────────────────────────────────────────── */
+
+.seg {
+  display: flex;
+  border-bottom: 2rpx solid var(--border);
+}
+
+.seg__item {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6rpx;
+  padding: 20rpx 0 18rpx;
+  font-size: var(--fs-body);
+  color: var(--muted);
+}
+
+.seg__item--on {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* 选中下划线。bottom 取负值盖住 .seg 自己的那条底线 */
+.seg__item--on::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2rpx;
+  height: 4rpx;
+  border-radius: 2rpx;
+  background: var(--primary);
+}
+
+.seg__count {
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   分类标记 —— 实心小方块
+
+   ★ 形式是硬约束：分类色**只以小方块出现**，绝不作为背景。
+     状态徽标是「浅底＋深字」胶囊，这里是「实心方块」，形式不同，
+     所以即便色相接近也不会被误读成状态。
+     方块的具体颜色由 utils/theme.js 的 categoryColor() 内联给出。
+   ───────────────────────────────────────────────────────────────────────── */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  min-width: 0;
+}
+
+.chip__dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 4rpx;
+  flex-shrink: 0;
+  background: var(--placeholder); /* theme.js 取不到色时的兜底 */
+}
+
+.chip__text {
+  font-size: var(--fs-caption);
+  color: var(--text-sub);
 }

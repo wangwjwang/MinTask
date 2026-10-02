@@ -14,15 +14,15 @@
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarBackgroundColor": "#FFFFFF",
     "navigationBarTitleText": "TeamPulse",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f4f5f7"
+    "backgroundColor": "#F5F3F1"
   },
   "tabBar": {
-    "color": "#8a8f99",
-    "selectedColor": "#2b6cff",
-    "backgroundColor": "#ffffff",
+    "color": "#8A8F99",
+    "selectedColor": "#2563EB",
+    "backgroundColor": "#FFFFFF",
     "borderStyle": "black",
     "list": [
       {

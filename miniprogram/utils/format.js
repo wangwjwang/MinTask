@@ -8,6 +8,7 @@
 
 const C = require('../shared/constants');
 const dates = require('../shared/dates');
+const theme = require('./theme');
 
 /** 状态徽标配色 key */
 function statusTone(status) {
@@ -17,11 +18,6 @@ function statusTone(status) {
 /** 阶段徽标配色 key */
 function stageTone(stage) {
   return C.STAGE_TONE[stage] || 'idle';
-}
-
-/** 优先级徽标配色 key */
-function priorityTone(priority) {
-  return C.PRIORITY_TONE[priority] || 'idle';
 }
 
 /**
@@ -117,7 +113,13 @@ function decorateTask(task) {
   return Object.assign({}, task, {
     _statusTone: statusTone(task.status),
     _stageTone: stageTone(task.stage),
-    _priorityTone: priorityTone(task.priority),
+    /**
+     * 分类展示色（十六进制字面量）。
+     * 挂在这里而不是让页面各自取，是因为 WXML 不能调 JS 函数 ——
+     * 卡片模板要直接拿它做内联 style。decorateTask 有 8 个调用方，
+     * 挂在这里所有调用方自动获得。
+     */
+    _catColor: theme.categoryColor(task.category),
     _dueText: due.text,
     _dueTone: due.tone,
     _overdue: due.overdue,
@@ -135,7 +137,6 @@ function decorateTasks(tasks) {
 module.exports = {
   statusTone,
   stageTone,
-  priorityTone,
   dueInfo,
   splitCollaborators,
   collaboratorText,

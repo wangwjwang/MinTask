@@ -1,72 +1,91 @@
-<!-- pages/board Tab3 任务看板 -->
-<view class="board">
+<!--
+  pages/board Tab3 任务看板
 
-  <!-- ── 顶部：筛选 + 汇总 ─────────────────────────────────────── -->
-  <view class="board__header">
-    <picker mode="selector" range="{{categoryOptions}}" bindchange="onFilterChange">
-      <view class="board__filter hit">
-        <text class="board__filter-label">{{filterCategory || '全部分类'}}</text>
-        <text class="board__filter-arrow">▾</text>
+  ★ v2 结构：统计胶囊 → 分类筛选 → 阶段分段切换 → 单一纵向列表。
+    取代了原来「三列横向滚动 + 列内纵向滚动」的嵌套滚动。
+-->
+<view class="page">
+
+  <!-- ── 汇总统计（IKEA 参考图顶部那排胶囊）────────────────────── -->
+  <view class="board__summary">
+    <view class="pill-row">
+      <view class="pill">共 <text class="pill__value">{{stats.total}}</text> 项</view>
+      <view class="pill {{stats.blocked ? 'pill--danger' : ''}}" bindtap="onBlockedTap">
+        卡壳 <text class="pill__value">{{stats.blocked}}</text>
       </view>
-    </picker>
+      <view class="pill {{stats.overdue ? 'pill--warn' : ''}}">
+        逾期 <text class="pill__value">{{stats.overdue}}</text>
+      </view>
+    </view>
+  </view>
 
-    <view class="board__stats">
-      <text class="board__stat">共 {{stats.total}} 项</text>
-      <text class="board__stat {{stats.blocked ? 'board__stat--danger' : ''}}" bindtap="onBlockedTap">
-        卡壳 {{stats.blocked}}
-      </text>
-      <text class="board__stat {{stats.overdue ? 'board__stat--warn' : ''}}">逾期 {{stats.overdue}}</text>
+  <!-- ── 分类筛选 ──────────────────────────────────────────────── -->
+  <picker mode="selector" range="{{categoryOptions}}" bindchange="onFilterChange">
+    <view class="filter-pill board__filter hit">
+      <text class="filter-pill__label">{{filterCategory || '全部分类'}}</text>
+      <text class="filter-pill__arrow">▾</text>
+    </view>
+  </picker>
+
+  <!--
+    ── 阶段分段切换 ──────────────────────────────────────────────
+    取自参考图 IKEA 顶部「Rooms │ Products」页签：下划线指示当前项。
+    每段带计数 —— 一次只显示一个阶段，靠计数保住"看板全貌"。
+  -->
+  <view class="seg board__seg">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="stage"
+      class="seg__item {{stageTab === item.stage ? 'seg__item--on' : ''}} hit"
+      data-stage="{{item.stage}}"
+      bindtap="onStageTap"
+    >
+      <text>{{item.stage}}</text>
+      <text class="seg__count">{{item.count}}</text>
     </view>
   </view>
 
   <view wx:if="{{loading}}" class="loading-block">正在加载看板…</view>
 
-  <!-- ── 看板列 ────────────────────────────────────────────────── -->
-  <scroll-view wx:else class="board__scroll" scroll-x enable-flex>
-    <view class="board__cols">
-      <view wx:for="{{columns}}" wx:key="stage" class="board__col">
-        <view class="board__col-head">
-          <text class="board__col-title">{{item.stage}}</text>
-          <text class="board__col-count">{{item.total}}</text>
+  <block wx:else>
+    <block wx:if="{{groups.length}}">
+      <!-- 当前阶段内按任务分类分组，每组可点标题折叠 -->
+      <view
+        wx:for="{{groups}}"
+        wx:for-item="group"
+        wx:key="key"
+        class="board__group"
+      >
+        <!-- 外层负责吸顶：吸附范围就是本组，滚过本组会被下一组顶走 -->
+        <view class="board__group-sticky">
+          <view
+            class="board__group-head hit"
+            data-category="{{group.category}}"
+            bindtap="onToggleGroup"
+          >
+            <view class="chip__dot" style="background: {{group.color}}"></view>
+            <text class="board__group-title ellipsis">{{group.category}}</text>
+            <text class="board__group-count">{{group.tasks.length}}</text>
+            <text class="board__group-arrow">{{group.collapsed ? '▸' : '▾'}}</text>
+          </view>
         </view>
 
-        <scroll-view class="board__col-body" scroll-y>
-          <block wx:if="{{item.groups.length}}">
-            <!-- 列内按任务类型分组，每组可点标题折叠 -->
-            <view
-              wx:for="{{item.groups}}"
-              wx:for-item="group"
-              wx:key="key"
-              class="board__group"
-            >
-              <!-- 外层负责吸顶：吸附范围就是本组，滚过本组会被下一组顶走 -->
-              <view class="board__group-sticky">
-                <view
-                  class="board__group-head hit"
-                  data-stage="{{item.stage}}"
-                  data-category="{{group.category}}"
-                  bindtap="onToggleGroup"
-                >
-                  <text class="board__group-arrow">{{group.collapsed ? '▸' : '▾'}}</text>
-                  <text class="board__group-title ellipsis">{{group.category}}</text>
-                  <text class="board__group-count">{{group.tasks.length}}</text>
-                </view>
-              </view>
-
-              <block wx:if="{{!group.collapsed}}">
-                <task-card
-                  wx:for="{{group.tasks}}"
-                  wx:for-item="task"
-                  wx:key="_id"
-                  task="{{task}}"
-                  bind:tap="onTaskTap"
-                />
-              </block>
-            </view>
-          </block>
-          <view wx:else class="board__col-empty">暂无任务</view>
-        </scroll-view>
+        <block wx:if="{{!group.collapsed}}">
+          <task-card
+            wx:for="{{group.tasks}}"
+            wx:for-item="task"
+            wx:key="_id"
+            task="{{task}}"
+            bind:tap="onTaskTap"
+          />
+        </block>
       </view>
-    </view>
-  </scroll-view>
+    </block>
+
+    <empty-state
+      wx:else
+      title="这个阶段下没有任务"
+      hint="上方可以切换阶段，或换一个分类看看"
+    />
+  </block>
 </view>

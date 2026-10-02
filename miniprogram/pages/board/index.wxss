@@ -1,121 +1,20 @@
 /* pages/board 任务看板 */
 
-/*
- * 看板用横向滚动的多列布局。手机上三列并排会挤，
- * 所以列宽设为屏宽的 ~72%，既能看到完整一列，又能瞥见下一列引导横滑。
- */
-.board {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: var(--bg);
+.board__summary {
+  padding: 4rpx 0 var(--gap);
 }
 
-.board__header {
-  padding: var(--gap) var(--gap) 8rpx;
-  background: var(--card);
-  border-bottom: 2rpx solid var(--border);
-  flex-shrink: 0;
-}
-
+/* 分类筛选胶囊的外观定义在 app.wxss 的 .filter-pill（与改任务页共用），
+   这里只补本页需要的外边距 */
 .board__filter {
-  display: inline-flex;
-  align-items: center;
-  padding: 14rpx 28rpx;
-  border-radius: 999rpx;
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: 28rpx;
-  font-weight: 500;
+  margin-bottom: var(--gap-sm);
 }
 
-.board__filter-arrow {
-  margin-left: 10rpx;
-  font-size: 22rpx;
+.board__seg {
+  margin-bottom: var(--gap-sm);
 }
 
-.board__stats {
-  display: flex;
-  gap: 28rpx;
-  margin-top: 20rpx;
-  padding-bottom: 8rpx;
-}
-
-.board__stat {
-  font-size: 24rpx;
-  color: var(--muted);
-}
-
-.board__stat--danger {
-  color: var(--tone-danger);
-  font-weight: 600;
-}
-
-.board__stat--warn {
-  color: var(--tone-warn);
-  font-weight: 600;
-}
-
-/* ── 列 ── */
-
-.board__scroll {
-  flex: 1;
-  min-height: 0;
-  white-space: nowrap;
-}
-
-.board__cols {
-  display: flex;
-  height: 100%;
-  padding: 0 var(--gap);
-  box-sizing: border-box;
-}
-
-.board__col {
-  width: 72vw;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  margin-right: var(--gap-sm);
-  padding-top: var(--gap);
-  box-sizing: border-box;
-  height: 100%;
-}
-
-.board__col:last-child {
-  margin-right: 0;
-}
-
-.board__col-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 8rpx 16rpx;
-  flex-shrink: 0;
-}
-
-.board__col-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.board__col-count {
-  font-size: 24rpx;
-  color: var(--muted);
-  background: var(--card);
-  border-radius: 999rpx;
-  padding: 2rpx 16rpx;
-}
-
-.board__col-body {
-  flex: 1;
-  min-height: 0;
-  /* 纵向滚动只在列内发生，横向由外层 scroll-view 接管 */
-  white-space: normal;
-}
-
-/* ── 列内的分类分组（比列头低一级）───────────────────────────────── */
+/* ── 列内的分类分组 ────────────────────────────────────────────── */
 
 .board__group {
   margin-bottom: var(--gap-sm);
@@ -124,61 +23,59 @@
 /*
  * 分类标题吸顶。
  *
- * 这一层专门用来吸顶，而不是直接把 position:sticky 挂在 .board__group-head 上，
+ * 这一层专门用来吸顶，而不是把 position:sticky 直接挂在 .board__group-head 上，
  * 是为了让背景能盖住标题与卡片之间的缝：
  * 吸附范围由父容器 .board__group 决定，所以滚过本组后标题会被下一组顶走。
  *
- * 两个点：
- *   1. background 必须**不透明**（这里用列自己的底色），
- *      否则吸顶后卡片会从标题底下透出来；
- *   2. 与卡片的间距做成这一层的 padding-bottom 而不是 head 的 margin ——
- *      margin 不在背景覆盖范围内，吸顶时那 12rpx 会露出滚过的卡片。
+ * 三个点：
+ *   1. background 必须**不透明**（用页面底色），否则吸顶后卡片会从标题底下透出来；
+ *   2. 与卡片的间距做成这一层的 padding-bottom，而不是 head 的 margin ——
+ *      margin 不在背景覆盖范围内，吸顶时那段缝会露出滚过的卡片；
+ *   3. 负的左右外边距 + 等量左右内边距，抵消 .page 的 28rpx 内边距，
+ *      让吸顶条横贯整屏。与 report 的 .report__sticky 是同一套做法。
  */
 .board__group-sticky {
   position: sticky;
   top: 0;
   z-index: 2;
   background: var(--bg);
+  margin-left: calc(-1 * var(--gap));
+  margin-right: calc(-1 * var(--gap));
+  padding-left: var(--gap);
+  padding-right: var(--gap);
   padding-bottom: 12rpx;
 }
 
+/*
+ * 分类标题行。分类色方块在最左，竖列扫读时形成一条颜色带。
+ * 不做边框不做底 —— 分组之间的层级靠留白和方块的颜色区分，
+ * 少一层描边观感更干净。
+ */
 .board__group-head {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 12rpx 16rpx;
-  border-radius: var(--radius-sm);
-  /* 半透明白压在 .board__group-sticky 的底色上，观感与改动前一致 */
-  background: rgba(255, 255, 255, 0.72);
-  border: 2rpx solid var(--border);
-}
-
-.board__group-arrow {
-  flex-shrink: 0;
-  width: 24rpx;
-  font-size: 20rpx;
-  color: var(--muted);
+  gap: 12rpx;
+  padding: 12rpx 0;
 }
 
 .board__group-title {
   flex: 1;
   min-width: 0;
-  font-size: 26rpx;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-sub);
 }
 
 .board__group-count {
   flex-shrink: 0;
-  font-size: 22rpx;
+  font-size: var(--fs-caption);
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
-.board__col-empty {
-  padding: 60rpx 0;
-  text-align: center;
-  font-size: 24rpx;
-  color: #b8bcc4;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: var(--radius);
+.board__group-arrow {
+  flex-shrink: 0;
+  width: 24rpx;
+  font-size: var(--fs-micro);
+  color: var(--muted);
 }

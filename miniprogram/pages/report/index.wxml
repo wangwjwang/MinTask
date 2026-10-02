@@ -4,51 +4,91 @@
   <view wx:if="{{loading}}" class="loading-block">正在加载任务…</view>
 
   <block wx:else>
-    <!-- ── 区块 1：我主办的任务 ───────────────────────────────────── -->
-    <view class="section-title">
-      <text>我主办的任务</text>
-      <text class="section-title__count">{{ledTasks.length}} 项</text>
-    </view>
+    <!--
+      ── 区块 1：我主办的任务（在办）──────────────────────────────
+      ★ 每组包一层 report__group：吸顶标题的吸附范围被限制在自己这一组内，
+        滚过本组后会被下一组的标题顶走。不包的话标题的父容器就是 .page，
+        三个标题会一直叠在最上面互相盖住。
+    -->
+    <view class="report__group">
+      <view class="section-title hit report__sticky" bindtap="onToggleLed">
+        <text>我主办的任务</text>
+        <text class="section-title__count">{{led.length}} 项 {{showLed ? '收起 ▲' : '展开 ▼'}}</text>
+      </view>
 
-    <block wx:if="{{ledTasks.length}}">
-      <task-card
-        wx:for="{{ledTasks}}"
-        wx:key="_id"
-        task="{{item}}"
-        bind:tap="onTaskTap"
-      />
-    </block>
-    <empty-state
-      wx:else
-      title="还没有你主办的任务"
-      hint="点击下方「新建任务」创建第一项"
-    />
+      <!-- 三个分支：有在办 / 全做完了（指路到下方已完成）/ 一条都没有 -->
+      <block wx:if="{{showLed}}">
+        <block wx:if="{{led.length}}">
+          <task-card
+            wx:for="{{led}}"
+            wx:key="_id"
+            task="{{item}}"
+            bind:tap="onTaskTap"
+          />
+        </block>
+        <view wx:elif="{{ledDone.length}}" class="t-muted report__note">
+          主办的任务都已完成，见下方「已完成」
+        </view>
+        <empty-state
+          wx:else
+          title="还没有你主办的任务"
+          hint="点击下方「新建任务」创建第一项"
+        />
+      </block>
+    </view>
 
     <view class="divider"></view>
 
-    <!-- ── 区块 2：我参与的协办任务 ───────────────────────────────── -->
-    <view class="section-title">
-      <text>我参与的协办任务</text>
-      <text class="section-title__count">{{joinedTasks.length}} 项</text>
+    <!-- ── 区块 2：我参与的协办任务（在办）──────────────────────── -->
+    <view class="report__group">
+      <view class="section-title hit report__sticky" bindtap="onToggleJoined">
+        <text>我参与的协办任务</text>
+        <text class="section-title__count">{{joined.length}} 项 {{showJoined ? '收起 ▲' : '展开 ▼'}}</text>
+      </view>
+
+      <block wx:if="{{showJoined}}">
+        <block wx:if="{{joined.length}}">
+          <task-card
+            wx:for="{{joined}}"
+            wx:key="_id"
+            task="{{item}}"
+            show-collaborators="{{false}}"
+            show-leader="{{true}}"
+            bind:tap="onTaskTap"
+          />
+        </block>
+        <view wx:elif="{{joinedDone.length}}" class="t-muted report__note">
+          协办的任务都已完成，见下方「已完成」
+        </view>
+        <empty-state
+          wx:else
+          title="还没有你协办的任务"
+          hint="点击下方「新加入协办」认领他人任务"
+        />
+      </block>
     </view>
 
-    <block wx:if="{{joinedTasks.length}}">
-      <task-card
-        wx:for="{{joinedTasks}}"
-        wx:key="_id"
-        task="{{item}}"
-        show-collaborators="{{false}}"
-        show-leader="{{true}}"
-        bind:tap="onTaskTap"
-      />
-    </block>
-    <empty-state
-      wx:else
-      title="还没有你协办的任务"
-      hint="点击下方「新加入协办」认领他人任务"
-    />
+    <view class="divider"></view>
 
-    <!-- ── 区块 3：新加入协办入口 ─────────────────────────────────── -->
+    <!-- ── 区块 3：已完成（默认收起，放最下）─────────────────────── -->
+    <view wx:if="{{doneAll.length}}" class="report__group">
+      <view class="section-title hit report__sticky" bindtap="onToggleDone">
+        <text>已完成</text>
+        <text class="section-title__count">{{doneAll.length}} 项 {{showDone ? '收起 ▲' : '展开 ▼'}}</text>
+      </view>
+
+      <block wx:if="{{showDone}}">
+        <task-card
+          wx:for="{{doneAll}}"
+          wx:key="_id"
+          task="{{item}}"
+          show-progress="{{false}}"
+          bind:tap="onTaskTap"
+        />
+      </block>
+    </view>
+
+    <!-- ── 区块 4：新加入协办入口 ─────────────────────────────────── -->
     <view class="card card--flat join-entry hit" bindtap="onJoinTap">
       <view class="row row--between">
         <view class="flex-1">
@@ -61,7 +101,7 @@
   </block>
 </view>
 
-<!-- ── 区块 4：新建任务（页面最底部固定按钮）────────────────────── -->
+<!-- ── 区块 5：新建任务（页面最底部固定按钮）────────────────────── -->
 <view class="footer-bar">
   <button class="btn btn--primary" bindtap="onCreateTap">＋ 新建任务</button>
 </view>

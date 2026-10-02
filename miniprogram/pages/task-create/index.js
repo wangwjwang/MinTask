@@ -28,7 +28,6 @@ Page({
     sourceOptions: C.SOURCE,
     taskTypeOptions: C.TASK_TYPE,
     recurFreqOptions: C.RECUR_FREQ,
-    priorityOptions: C.PRIORITY,
 
     form: {
       task_name: '',
@@ -36,7 +35,6 @@ Page({
       category: '',
       source: '',
       task_type: '计划性',
-      priority: 'P2',
       recur_freq: '不适用',
       recur_rule: '',
       start_date: '',
@@ -197,7 +195,6 @@ Page({
       category: form.category,
       source: form.source,
       task_type: form.task_type,
-      priority: form.priority,
       recur_freq: form.recur_freq,
       recur_rule: form.recur_rule.trim(),
       start_date: form.start_date,

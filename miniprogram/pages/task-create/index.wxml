@@ -55,14 +55,6 @@
       options="{{taskTypeOptions}}"
       bind:change="onEnumChange"
     />
-
-    <field-picker
-      label="优先级"
-      field="priority"
-      value="{{form.priority}}"
-      options="{{priorityOptions}}"
-      bind:change="onEnumChange"
-    />
   </view>
 
   <!-- ── 人员 ──────────────────────────────────────────────────── -->

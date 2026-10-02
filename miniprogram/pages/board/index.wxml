@@ -27,18 +27,42 @@
       <view wx:for="{{columns}}" wx:key="stage" class="board__col">
         <view class="board__col-head">
           <text class="board__col-title">{{item.stage}}</text>
-          <text class="board__col-count">{{item.tasks.length}}</text>
+          <text class="board__col-count">{{item.total}}</text>
         </view>
 
         <scroll-view class="board__col-body" scroll-y>
-          <block wx:if="{{item.tasks.length}}">
-            <task-card
-              wx:for="{{item.tasks}}"
-              wx:for-item="task"
-              wx:key="_id"
-              task="{{task}}"
-              bind:tap="onTaskTap"
-            />
+          <block wx:if="{{item.groups.length}}">
+            <!-- 列内按任务类型分组，每组可点标题折叠 -->
+            <view
+              wx:for="{{item.groups}}"
+              wx:for-item="group"
+              wx:key="key"
+              class="board__group"
+            >
+              <!-- 外层负责吸顶：吸附范围就是本组，滚过本组会被下一组顶走 -->
+              <view class="board__group-sticky">
+                <view
+                  class="board__group-head hit"
+                  data-stage="{{item.stage}}"
+                  data-category="{{group.category}}"
+                  bindtap="onToggleGroup"
+                >
+                  <text class="board__group-arrow">{{group.collapsed ? '▸' : '▾'}}</text>
+                  <text class="board__group-title ellipsis">{{group.category}}</text>
+                  <text class="board__group-count">{{group.tasks.length}}</text>
+                </view>
+              </view>
+
+              <block wx:if="{{!group.collapsed}}">
+                <task-card
+                  wx:for="{{group.tasks}}"
+                  wx:for-item="task"
+                  wx:key="_id"
+                  task="{{task}}"
+                  bind:tap="onTaskTap"
+                />
+              </block>
+            </view>
           </block>
           <view wx:else class="board__col-empty">暂无任务</view>
         </scroll-view>

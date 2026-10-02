@@ -16,25 +16,52 @@
   <view wx:if="{{loading && !tasks.length}}" class="loading-block">正在加载…</view>
 
   <block wx:else>
-    <block wx:if="{{shownTasks.length}}">
+    <!--
+      ── 在办任务 ──────────────────────────────────────────────────
+      ★ 下面三个分支是一个 wx:if / wx:elif / wx:elif 链，中间**不能插注释**。
+
+      ★ 第二个空状态的条件别简化成 shownOpen.length === 0：
+        选「全部」而任务又全做完时，上方列表是空的、但下方有已完成组，
+        那时弹"还没有你主办的任务"或"该阶段下没有任务"都是误导。
+        只有底部也没东西可看时，才轮到空状态出场。
+    -->
+    <block wx:if="{{shownOpen.length}}">
       <task-card
-        wx:for="{{shownTasks}}"
+        wx:for="{{shownOpen}}"
         wx:key="_id"
         task="{{item}}"
         bind:tap="onTaskTap"
       />
     </block>
-
     <empty-state
-      wx:elif="{{tasks.length}}"
+      wx:elif="{{!tasks.length}}"
+      title="还没有你主办的任务"
+      hint="请到「报任务」页新建任务"
+    />
+    <empty-state
+      wx:elif="{{!showDoneGroup || !doneTasks.length}}"
       title="该阶段下没有任务"
       hint="换个筛选条件看看"
     />
 
-    <empty-state
-      wx:else
-      title="还没有你主办的任务"
-      hint="请到「报任务」页新建任务"
-    />
+    <!-- ── 已完成（默认收起，放最下）─────────────────────────────── -->
+    <block wx:if="{{showDoneGroup && doneTasks.length}}">
+      <view class="divider"></view>
+
+      <view class="section-title hit" bindtap="onToggleDone">
+        <text>已完成</text>
+        <text class="section-title__count">{{doneTasks.length}} 项 {{showDone ? '收起 ▲' : '展开 ▼'}}</text>
+      </view>
+
+      <block wx:if="{{showDone}}">
+        <task-card
+          wx:for="{{doneTasks}}"
+          wx:key="_id"
+          task="{{item}}"
+          show-progress="{{false}}"
+          bind:tap="onTaskTap"
+        />
+      </block>
+    </block>
   </block>
 </view>

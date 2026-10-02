@@ -8,10 +8,10 @@
   class="task-card hit {{task._hasBlocker ? 'card--blocked' : ''}}"
   bindtap="onTap"
 >
-  <!-- 第一行：任务名 + 优先级 -->
+  <!-- 第一行：任务名 + 任务来源 -->
   <view class="row row--between task-card__head">
     <view class="flex-1 t-title ellipsis-2">{{task.task_name}}</view>
-    <view class="badge badge--{{task._priorityTone}} task-card__priority">{{task.priority}}</view>
+    <view wx:if="{{task.source}}" class="tag task-card__source">{{task.source}}</view>
   </view>
 
   <!-- 第二行：状态 / 阶段 / 卡壳标记 -->

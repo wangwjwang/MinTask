@@ -115,6 +115,65 @@
   white-space: normal;
 }
 
+/* ── 列内的分类分组（比列头低一级）───────────────────────────────── */
+
+.board__group {
+  margin-bottom: var(--gap-sm);
+}
+
+/*
+ * 分类标题吸顶。
+ *
+ * 这一层专门用来吸顶，而不是直接把 position:sticky 挂在 .board__group-head 上，
+ * 是为了让背景能盖住标题与卡片之间的缝：
+ * 吸附范围由父容器 .board__group 决定，所以滚过本组后标题会被下一组顶走。
+ *
+ * 两个点：
+ *   1. background 必须**不透明**（这里用列自己的底色），
+ *      否则吸顶后卡片会从标题底下透出来；
+ *   2. 与卡片的间距做成这一层的 padding-bottom 而不是 head 的 margin ——
+ *      margin 不在背景覆盖范围内，吸顶时那 12rpx 会露出滚过的卡片。
+ */
+.board__group-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+  padding-bottom: 12rpx;
+}
+
+.board__group-head {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 16rpx;
+  border-radius: var(--radius-sm);
+  /* 半透明白压在 .board__group-sticky 的底色上，观感与改动前一致 */
+  background: rgba(255, 255, 255, 0.72);
+  border: 2rpx solid var(--border);
+}
+
+.board__group-arrow {
+  flex-shrink: 0;
+  width: 24rpx;
+  font-size: 20rpx;
+  color: var(--muted);
+}
+
+.board__group-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+
+.board__group-count {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
 .board__col-empty {
   padding: 60rpx 0;
   text-align: center;

@@ -9,7 +9,7 @@
     <view class="card detail__head {{task._hasBlocker ? 'card--blocked' : ''}}">
       <view class="row row--between">
         <view class="flex-1 t-title" bindlongpress="onCopyTaskName">{{task.task_name}}</view>
-        <view class="badge badge--{{task._priorityTone}}">{{task.priority}}</view>
+        <view wx:if="{{task.source}}" class="tag detail__source">{{task.source}}</view>
       </view>
 
       <view class="row row--wrap detail__tags">

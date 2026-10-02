@@ -11,7 +11,7 @@
       <view class="row row--wrap add__tags">
         <view class="badge badge--{{task._statusTone}}">{{task.status}}</view>
         <view class="badge badge--{{task._stageTone}}">{{task.stage}}</view>
-        <view class="badge badge--{{task._priorityTone}}">{{task.priority}}</view>
+        <view wx:if="{{task.source}}" class="tag">{{task.source}}</view>
         <view wx:if="{{task._hasBlocker}}" class="blocker-flag">卡壳未解决</view>
       </view>
       <view class="row row--between add__meta">

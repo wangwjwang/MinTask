@@ -14,7 +14,7 @@
   align-items: flex-start;
 }
 
-.task-card__priority {
+.task-card__source {
   flex-shrink: 0;
   margin-top: 4rpx;
 }

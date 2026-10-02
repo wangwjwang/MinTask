@@ -1,5 +1,37 @@
 /* pages/report */
 
+/*
+ * ── 吸顶的分组标题 ──────────────────────────────────────────────────
+ * 「我主办 / 我协办 / 已完成」三个标题滚到顶部后留在那里，不再被推走。
+ *
+ * 四个点缺一个都会出问题：
+ *   1. background 必须**不透明** —— 吸顶后卡片会从标题底下滚过；
+ *   2. 负的左右外边距 + 等量左右内边距，用来抵消 .page 的 24rpx 内边距。
+ *      不加的话吸顶条两侧各留一条 24rpx 的缝，滚动的内容会从缝里漏出来；
+ *   3. 与下方卡片的间距靠 .section-title 自带的 padding-bottom(16rpx) 撑。
+ *      如果改用 margin，那段不在背景覆盖范围内，吸顶时就会露出滚过的卡片；
+ *   4. z-index 要低于 .footer-bar(10)，否则吸顶条会盖住底部按钮栏。
+ *
+ * 吸附范围由父容器决定：每组都被 .report__group 包住，
+ * 所以滚过本组后标题会被下一组的标题顶走，而不是一直跟到页面底部。
+ */
+.report__sticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+  margin-left: calc(-1 * var(--gap));
+  margin-right: calc(-1 * var(--gap));
+  padding-left: var(--gap);
+  padding-right: var(--gap);
+}
+
+/* 分组空了但另一组还有内容时的说明行（比 empty-state 轻，不喧宾夺主） */
+.report__note {
+  padding: 20rpx 4rpx;
+  font-size: 26rpx;
+}
+
 .join-entry {
   margin-top: var(--gap);
 }

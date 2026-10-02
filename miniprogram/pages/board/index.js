@@ -27,8 +27,17 @@ const C = require('../../shared/constants');
 Page({
   data: {
     loading: true,
-    /** 按阶段分好的三列：[{ stage, tasks: [] }] */
+    /**
+     * 按阶段分好的三列，列内再按分类分组：
+     *   [{ stage, total, groups: [{ key, category, collapsed, tasks: [] }] }]
+     */
     columns: [],
+    /**
+     * ★ 折叠状态独立于 columns 存放，key 是 `阶段|分类`。
+     *   若把 collapsed 只挂在 columns 上，每次筛选/刷新重建 columns 时
+     *   用户的展开状态就会被重置 —— 切一下筛选回来全塌了。
+     */
+    collapsedMap: {},
     /** 全部任务的原始集合（筛选时从这里过滤，不重新查库） */
     allTasks: [],
 
@@ -74,19 +83,41 @@ Page({
     }
   },
 
-  /** 按分类筛选 + 按阶段分列 + 统计。全在前端做，切换筛选无需再查库。 */
+  /** 按分类筛选 + 按阶段分列 + 列内按分类分组 + 统计。全在前端做，切换筛选无需再查库。 */
   applyFilter() {
-    const { allTasks, filterCategory } = this.data;
+    const { allTasks, filterCategory, collapsedMap } = this.data;
 
     const filtered = filterCategory
       ? allTasks.filter((t) => t.category === filterCategory)
       : allTasks;
 
     // 按 STAGE_COLUMNS 的顺序分列，保证列顺序与枚举定义一致
-    const columns = C.STAGE_COLUMNS.map((stage) => ({
-      stage,
-      tasks: filtered.filter((t) => t.stage === stage),
-    }));
+    const columns = C.STAGE_COLUMNS.map((stage) => {
+      const inStage = filtered.filter((t) => t.stage === stage);
+
+      // 分组顺序跟 C.CATEGORY 的枚举顺序走（而不是按任务数量排序），
+      // 这样同一条任务每次渲染都落在同一位置，不会切个筛选就跳位置。
+      // 空分类不产生分组。
+      const cats = C.CATEGORY.filter((c) => inStage.some((t) => t.category === c));
+      // ★ 兜底：万一库里有分类不在枚举内（有人直接在控制台改库就可能出现），
+      //   追加到末尾，绝不能让它从看板上悄悄消失。
+      inStage.forEach((t) => {
+        if (cats.indexOf(t.category) === -1) cats.push(t.category);
+      });
+
+      const groups = cats.map((category) => {
+        const key = stage + '|' + category;
+        return {
+          key,
+          category,
+          tasks: inStage.filter((t) => t.category === category),
+          // 用户没手动动过的分组用默认值：已完成列默认收起，其余默认展开
+          collapsed: key in collapsedMap ? collapsedMap[key] : stage === '已完成',
+        };
+      });
+
+      return { stage, total: inStage.length, groups };
+    });
 
     this.setData({
       columns,
@@ -96,6 +127,25 @@ Page({
         overdue: filtered.filter((t) => t._overdue).length,
       },
     });
+  },
+
+  /**
+   * 展开 / 收起某一列里的某个分类。
+   * 只翻转 collapsedMap，再重跑 applyFilter 重建 columns —— 单一数据源，
+   * 避免 columns 和折叠状态两处各存一份而走岔。
+   */
+  onToggleGroup(e) {
+    // 注意：dataset 的键名会被小程序转成小写，这里只传中文值（阶段/分类名），不受影响
+    const stage = e.currentTarget.dataset.stage;
+    const category = e.currentTarget.dataset.category;
+    if (!stage || !category) return;
+
+    const key = stage + '|' + category;
+    const map = Object.assign({}, this.data.collapsedMap);
+    const cur = key in map ? map[key] : stage === '已完成';
+    map[key] = !cur;
+
+    this.setData({ collapsedMap: map }, () => this.applyFilter());
   },
 
   onFilterChange(e) {

@@ -38,7 +38,6 @@ Page({
     sourceOptions: C.SOURCE,
     taskTypeOptions: C.TASK_TYPE,
     recurFreqOptions: C.RECUR_FREQ,
-    priorityOptions: C.PRIORITY,
     statusOptions: C.STATUS,
     stageOptions: C.STAGE,
 
@@ -99,7 +98,6 @@ Page({
         category: task.category || '',
         source: task.source || '',
         task_type: task.task_type || '计划性',
-        priority: task.priority || 'P2',
         recur_freq: task.recur_freq || '不适用',
         recur_rule: task.recur_rule || '',
         status: task.status || '正常',

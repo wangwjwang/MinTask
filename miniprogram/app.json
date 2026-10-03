@@ -27,19 +27,27 @@
     "list": [
       {
         "pagePath": "pages/report/index",
-        "text": "报任务"
+        "text": "报任务",
+        "iconPath": "images/tabbar/report.png",
+        "selectedIconPath": "images/tabbar/report-on.png"
       },
       {
         "pagePath": "pages/update/index",
-        "text": "改任务"
+        "text": "改任务",
+        "iconPath": "images/tabbar/update.png",
+        "selectedIconPath": "images/tabbar/update-on.png"
       },
       {
         "pagePath": "pages/board/index",
-        "text": "任务看板"
+        "text": "任务看板",
+        "iconPath": "images/tabbar/board.png",
+        "selectedIconPath": "images/tabbar/board-on.png"
       },
       {
         "pagePath": "pages/people/index",
-        "text": "人员看板"
+        "text": "人员看板",
+        "iconPath": "images/tabbar/people.png",
+        "selectedIconPath": "images/tabbar/people-on.png"
       }
     ]
   },

@@ -62,8 +62,11 @@
 
 - **WXML**：整块 `footer-bar` 删除（未解决卡壳提示 + 5 个按钮 + 「你不在协作
   名单中，只能查看」提示行）。
-- **「有 N 项未解决的卡壳」移入任务信息卡**。它是信息不是操作，跟着 footer 一起
-  删会把这条信息弄丢。
+- **「有 N 项未解决的卡壳」移入任务信息卡**（放在字段标签行 `detail__tags`
+  下面）。它是信息不是操作，跟着 footer 一起删会把这条信息弄丢。
+  **承载它的 `.detail__alert` 因此不是死类，保留**（只把 `margin-bottom`
+  改成 `margin-top`，因为位置从 footer 移到了卡片内部）；
+  它要用 `.pill` 是因为胶囊底色是白的，放进白卡片会隐形。
 - **空状态文案要改**：`index.wxml:96` 现在是
   `hint="{{canReport ? '点下方按钮上报第一条进展' : '主办人还未上报进展'}}"` ——
   按钮没了，「点下方按钮」就成了假话。两条分支合并成一句（如
@@ -76,9 +79,11 @@
   （`index.js:128`），与 `computePerms` 无任何关系。所以 footer 一摘，
   `computePerms` 连同 7 个 data 字段（含 `isAdmin`）全部成为死代码，一并删除。
   删 `onReport` / `onEdit` / `onJoin` / `onLeave` / `onDelete` 五个 handler。
+- 顺带删掉两个**本来就已死**的字段：`myOpenid`（`index.js:45` 声明、
+  `:81` 赋值，全仓没有任何读取方）和 `isAdmin`。
 - 根节点去掉 `page--with-footer`，否则底部留一块空白。
-- WXSS 中 `.detail__del` / `.detail__edit` / `.detail__actions` / `.detail__hint` /
-  `.detail__alert` 成为死类，删除。
+- WXSS 中 `.detail__del` / `.detail__edit` / `.detail__actions` / `.detail__hint`
+  成为死类，删除。（`.detail__alert` 保留，见上。）
 
 > 摘完之后这页的 `perm` 依赖只剩 `canResolveBlocker` 一处，
 > `require('../../shared/perm')` 仍然需要。

@@ -1,14 +1,19 @@
 /**
  * pages/task-edit —— 改任务编辑页（子页面）
  * ---------------------------------------------------------------------------
- * 主办人可手工调整：任务状态、整体进度%、计划开始时间、计划截止时间、
- * 实际完成时间、优先级、任务名称等（需求第 5 节 Tab2 下钻页）。
+ * 两种能力、两条判据（都取自 shared/perm.js，与云函数同源）：
+ *   编辑 —— 仅主办人。可调整任务状态、整体进度%、计划开始/截止时间、
+ *           实际完成时间、优先级、任务名称等（需求第 5 节 Tab2 下钻页）。
+ *   删除 —— 主办人或管理员。本页底部的独立危险区。
  *
- * ★ 两条前端守则：
- *   1. 进页面先判 isLeader。非主办人直接挡回去 —— 但这只是体验优化，
- *      真正的拦截在 taskService.update 的 requireLeaderOf。
+ * ★ 三条前端守则：
+ *   1. 进页面先判权限。编辑与删除**分开判**，两者都不满足才挡回去 ——
+ *      管理员即使不是主办人也要能进来删（理由见 load() 里的长注释），
+ *      但他看不到编辑表单。这只是体验优化，真正的拦截在云函数
+ *      taskService.update 的 requireLeaderOf 与 delete 的权限校验。
  *   2. 只提交改动过的字段（dirty 追踪）。云函数虽然有白名单，
  *      但把所有字段无脑提交会覆盖掉期间别处发生的变更（比如别人加了协办人）。
+ *   3. 删除有确认框，且在有未保存改动时额外说明改动会一并丢失。
  * ---------------------------------------------------------------------------
  */
 
@@ -63,6 +68,15 @@ Page({
 
     /** 语音播报式的变更摘要，保存成功后展示 */
     dirtyCount: 0,
+
+    /**
+     * 能否编辑本任务（仅主办人）/ 能否删除本任务（主办人或管理员）。
+     * 两个判据都取自 shared/perm.js 与云函数同源，前端不另写规则 ——
+     * 理由同本文件顶部的两条守则。canEdit 还用来给管理员分区：
+     * 只满足删除的管理员看不到编辑表单。
+     */
+    canEdit: false,
+    canDelete: false,
   },
 
   onLoad(query) {
@@ -91,8 +105,22 @@ Page({
         return;
       }
 
-      // 非主办人挡回。云函数同样会拦，这里避免用户白填一遍。
-      if (!perm.canEditTask(task, session.openid)) {
+      /*
+       * 本页现在承载两种能力，判据分开算，**不要合成一条**：
+       *   编辑 → 仅主办人（canEditTask，云函数 taskService.update 同款）
+       *   删除 → 主办人或管理员（canDeleteTask）
+       * ★ 为什么必须给管理员留门：perm.canDeleteTask 的注释点名了——历史导入
+       *   的任务里 leaderId 为空，没人能"认领"成主办人，管理员是它们唯一的
+       *   删除出口。若这里仍按"仅主办人"挡回，那些任务就只能去云控制台手工删，
+       *   连带清理进展记录。迁移前这条路径存在于 task-detail（那里没有守则），
+       *   搬过来时必须一起搬。
+       * ★ 只满足删除的管理员进得来，但看不到编辑表单（WXML 按 canEdit 分区），
+       *   否则他会填完一屏再被云函数的 FORBIDDEN_NOT_LEADER 弹回来。
+       */
+      const canEdit = perm.canEditTask(task, session.openid);
+      const canDelete = perm.canDeleteTask(task, session.openid, auth.isAdmin());
+
+      if (!canEdit && !canDelete) {
         toast.error('只有主办人可以修改任务');
         setTimeout(() => wx.navigateBack(), 1200);
         return;
@@ -126,6 +154,11 @@ Page({
         collaboratorIds: (task.collaboratorIds || []).slice(),
         allMembers: claimed,
         task: fmt.decorateTask(task),
+        // ★ 传入 task 原文档（不是 decorateTask 的产物）—— 判据函数要看
+        //   leaderId 与 collaboratorIds，装饰后的对象虽然也带着，但保持
+        //   与云函数拿到的是同一个形状更不容易出错。
+        canEdit,
+        canDelete,
       });
     } catch (e) {
       if (e.code !== 'NEED_CLAIM') {
@@ -242,5 +275,33 @@ Page({
       dirtyCount: 0,
     });
     toast.toast('已还原为上次保存的内容');
+  },
+
+  /**
+   * 删除任务（主办人或管理员）。级联删除进展由云函数处理。
+   *
+   * ★ 从 pages/task-detail 搬来的：那里现在是纯只读页，不该有写操作入口。
+   * ★ 本页有「改了还没保存」的状态，删除会把它一起丢掉，所以确认文案要
+   *   在那种情况下多说一句 —— 否则用户会以为自己改的东西还在。
+   */
+  onDelete() {
+    const { task, taskId, dirtyCount } = this.data;
+    if (!task) return;
+
+    const base = `将永久删除「${task.task_name}」及其全部进展记录，不可恢复。`;
+    const extra = dirtyCount ? `\n\n你有 ${dirtyCount} 项改动尚未保存，也会一并丢失。` : '';
+
+    toast
+      .confirm(base + extra, '删除任务', '删除')
+      .then(async (ok) => {
+        if (!ok) return;
+        try {
+          await toast.withLoading(() => api.taskApi.remove(taskId), '删除中');
+          toast.success('已删除');
+          setTimeout(() => wx.navigateBack(), 800);
+        } catch (e) {
+          /* api 层已提示 */
+        }
+      });
   },
 });

@@ -38,3 +38,26 @@
   width: 180rpx;
   flex-shrink: 0;
 }
+
+/* ── 危险区：删除任务 ── */
+
+.edit__danger-zone {
+  margin-top: var(--gap);
+}
+
+.edit__danger-tip {
+  line-height: 1.6;
+}
+
+/*
+ * 红描边不填充 —— 底栏已经有一个实心主色的「保存」，
+ * 再来一个实心红，两个实心按钮会互相抢视觉重心，
+ * 而删除恰恰是最不该被误点的那一个。
+ */
+.edit__danger {
+  width: 100%;
+  margin-top: 20rpx;
+  color: var(--tone-danger);
+  background: var(--card);
+  border: 2rpx solid var(--tone-danger);
+}

@@ -1,9 +1,15 @@
-<!-- pages/task-edit 修改任务（仅主办人）-->
+<!-- pages/task-edit 修改任务（编辑：仅主办人；删除：主办人或管理员）-->
 <view class="page page--with-footer">
 
   <view wx:if="{{loading}}" class="loading-block">正在加载…</view>
 
-  <block wx:else>
+  <!--
+    ── 编辑表单：仅主办人 ──────────────────────────────────────────
+    ★ 用独立的 wx:if 而不是接在 loading 后面的 wx:else —— 本页还接待
+      "只满足删除的管理员"，他们要看到下面的危险区，但看不到这屏表单。
+      也刻意不写成 wx:if/wx:elif 链：链中间不能插注释（见 update 页的告示）。
+  -->
+  <block wx:if="{{!loading && canEdit}}">
     <!-- ── 名称与详情 ────────────────────────────────────────────── -->
     <view class="card">
       <view class="field">
@@ -180,9 +186,33 @@
       </view>
     </view>
   </block>
+
+  <!--
+    ── 危险区：删除任务 ─────────────────────────────────────────────
+    ★ 放在滚动内容的最底部，**不放固定底栏**。底栏是「保存」的地盘，
+      删除混进去迟早有人手滑点到。
+    ★ 红描边不填充，与 .btn--danger 的实心红刻意区分开。
+    ★ 显隐走 perm.canDeleteTask（与云函数同源）：主办人恒真；
+      管理员即使不是主办人也为真 —— 那是 leaderId 为空的历史任务
+      唯一的删除出口（见 index.js load() 里的长注释）。
+    ★ 这一块**在编辑表单之外**，所以非主办人的管理员也看得到。
+      上面的分隔线只在有表单时才画，免得管理员那屏顶着一根孤线。
+  -->
+  <block wx:if="{{!loading && canDelete}}">
+    <view wx:if="{{canEdit}}" class="divider"></view>
+
+    <view class="card card--flat edit__danger-zone">
+      <view class="t-muted edit__danger-tip">
+        删除后，这个任务及其全部进展记录都会消失，无法恢复。
+      </view>
+      <button class="btn edit__danger" bindtap="onDelete">删除该任务</button>
+    </view>
+  </block>
 </view>
 
-<view wx:if="{{!loading}}" class="footer-bar">
+<!-- ★ 底栏跟着编辑表单走（canEdit），不是跟着"加载完了"走：
+     非主办人的管理员进得来（为了删任务），但他没有可保存的东西。 -->
+<view wx:if="{{!loading && canEdit}}" class="footer-bar">
   <view class="row edit__footer">
     <button class="btn btn--plain edit__reset" bindtap="onReset" disabled="{{!dirtyCount}}">
       还原

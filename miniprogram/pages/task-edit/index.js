@@ -129,8 +129,10 @@ Page({
        *   迁移前这条路是通的：删除按钮在 task-detail，而 task-detail **没有**
        *   主办人守则，任何人都从看板点得进去，管理员因此能删任意任务。
        *   本次重构把看板改成只读、把删除收进本页，顺带把那条路截断了。
-       *   canDelete 分支先留着（判据与云函数同源，将来补入口即可生效），
-       *   但**不要**在别处声称管理员现在能删别人的任务。
+       *   ★ 这是**已确认的取舍，不是遗漏**：2026-10-03 与用户确认过，暂不补入口，
+       *   canDelete 分支保留即可 —— 判据与云函数同源，将来补一张入口卡就能生效，
+       *   云函数侧零改动。但**不要**在别处声称管理员现在能删别人的任务。
+       *   将来若要补，最省事的落点是改任务页再加一张入口卡（对偶于「退出协办」）。
        */
       const canEdit = perm.canEditTask(task, session.openid);
       const canDelete = perm.canDeleteTask(task, session.openid, auth.isAdmin());

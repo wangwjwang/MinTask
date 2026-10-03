@@ -198,29 +198,16 @@
   margin-top: 16rpx;
 }
 
-/* ── 底部操作栏 ── */
+/* ── 未解决卡壳计数 ──
+   住在任务信息卡内部（原来在底部操作栏里，操作栏摘掉后挪上来的）。
+   ★ 不用全局 .pill：胶囊底色是 var(--card) 的白，放进白卡片会隐形。 */
 
 .detail__alert {
   padding: 12rpx 20rpx;
-  margin-bottom: 14rpx;
+  margin-top: 16rpx;
   border-radius: var(--radius-sm);
   background: var(--tone-danger-bg);
   color: var(--tone-danger);
   font-size: var(--fs-caption);
-  text-align: center;
-}
-
-.detail__actions {
-  gap: 16rpx;
-}
-
-.detail__edit,
-.detail__del {
-  width: 160rpx;
-  flex-shrink: 0;
-}
-
-.detail__hint {
-  margin-top: 14rpx;
   text-align: center;
 }

@@ -1,5 +1,5 @@
-<!-- pages/task-detail 任务详情 -->
-<view class="page page--with-footer">
+<!-- pages/task-detail 任务详情（纯只读）-->
+<view class="page">
 
   <view wx:if="{{loading}}" class="loading-block">正在加载…</view>
 
@@ -25,6 +25,12 @@
         <view class="badge badge--{{task._stageTone}}">{{task.stage}}</view>
         <view wx:if="{{task.origin === 'periodic'}}" class="tag">周期生成</view>
         <view wx:if="{{task._hasBlocker}}" class="blocker-flag">卡壳</view>
+      </view>
+
+      <!-- 未解决的卡壳数。它是信息不是操作，原来在底部操作栏里，
+           操作栏摘掉后挪到这里，否则这条信息就丢了。 -->
+      <view wx:if="{{openBlockerCount}}" class="detail__alert">
+        有 {{openBlockerCount}} 项未解决的卡壳
       </view>
 
       <view class="detail__progress">
@@ -93,7 +99,7 @@
     <empty-state
       wx:if="{{!records.length}}"
       title="还没有进展记录"
-      hint="{{canReport ? '点下方按钮上报第一条进展' : '主办人还未上报进展'}}"
+      hint="主办人还未上报进展"
     />
 
     <view wx:else class="timeline">
@@ -157,36 +163,4 @@
     </view>
 
   </block>
-
-  <!-- ── 底部操作栏 ─────────────────────────────────────────────── -->
-  <view wx:if="{{task}}" class="footer-bar">
-    <!-- 未解决卡壳提示 -->
-    <view wx:if="{{openBlockerCount}}" class="detail__alert">
-      有 {{openBlockerCount}} 项未解决的卡壳
-    </view>
-
-    <view class="row detail__actions">
-      <view wx:if="{{canReport}}" class="btn btn--primary flex-1 hit" bindtap="onReport">
-        上报进展
-      </view>
-      <view wx:if="{{canEdit}}" class="btn btn--plain detail__edit hit" bindtap="onEdit">
-        编辑任务
-      </view>
-      <view wx:if="{{canJoin}}" class="btn btn--ghost flex-1 hit" bindtap="onJoin">
-        加入协办
-      </view>
-      <view wx:if="{{canLeave}}" class="btn btn--plain flex-1 hit" bindtap="onLeave">
-        退出协办
-      </view>
-      <view wx:if="{{canDelete}}" class="btn btn--danger detail__del hit" bindtap="onDelete">
-        删除
-      </view>
-    </view>
-
-    <!-- 既非主办也非协办、又不能加入（任务已完成）时的说明 -->
-    <view
-      wx:if="{{!canReport && !canJoin && !isAdmin}}"
-      class="t-muted detail__hint"
-    >该任务已完成，你不在协作名单中，只能查看。</view>
-  </view>
 </view>

@@ -72,5 +72,16 @@
         />
       </block>
     </block>
+
+    <!-- ── 退出协办入口 ───────────────────────────────────────────── -->
+    <view class="card card--flat entry-card hit" bindtap="onLeaveTap">
+      <view class="row row--between">
+        <view class="flex-1">
+          <view class="t-title">退出协办</view>
+          <view class="t-muted">浏览你参与协办的任务，可自行退出</view>
+        </view>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
   </block>
 </view>

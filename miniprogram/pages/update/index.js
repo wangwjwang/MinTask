@@ -138,4 +138,12 @@ Page({
     if (!task || !task._id) return;
     wx.navigateTo({ url: `/pages/task-edit/index?taskId=${task._id}` });
   },
+
+  /**
+   * 退出协办入口。放在本页而不是任务看板：
+   * 退出协办本质是"改任务"，与删任务同属对任务的操作，归到这里。
+   */
+  onLeaveTap() {
+    wx.navigateTo({ url: '/pages/leave/index' });
+  },
 });

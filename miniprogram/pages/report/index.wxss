@@ -32,15 +32,5 @@
   font-size: var(--fs-sub);
 }
 
-.join-entry {
-  margin-top: var(--gap);
-}
-
-/*
- * 「加入任务」入口的箭头。★ 40rpx 不是字号，是图标尺寸 ——
- * 它是可点入口的指示符（和 tabBar 图标同类），不参与文字层级，
- * 所以刻意不套 --fs-* 令牌，避免以后有人按字号体系去"修正"它。
- */
-.join-entry .field__arrow {
-  font-size: 40rpx;
-}
+/* 「新加入协办」入口卡的样式已上提到 app.wxss 的 .entry-card
+   （改任务页的「退出协办」入口是同一个视觉件，两页共用一份定义）。 */

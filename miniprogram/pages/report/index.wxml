@@ -106,7 +106,7 @@
     </view>
 
     <!-- ── 区块 4：新加入协办入口 ─────────────────────────────────── -->
-    <view class="card card--flat join-entry hit" bindtap="onJoinTap">
+    <view class="card card--flat entry-card hit" bindtap="onJoinTap">
       <view class="row row--between">
         <view class="flex-1">
           <view class="t-title">新加入协办</view>

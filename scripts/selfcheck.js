@@ -8,12 +8,14 @@
  *   - 幂等 _id 的确定性（写错会导致重复生成任务）
  *   - 权限矩阵（写错会导致越权）
  *   - 字段白名单（写错会导致前端能改 leaderId）
+ *   - 数组更新指令的写法（写错会导致加入协办静默失效，见文件末尾那一节）
  *
  * 不依赖云环境，直接 `node scripts/selfcheck.js` 即可运行。
  * 建议改完 shared/ 后跑一次。
  * ---------------------------------------------------------------------------
  */
 
+const fs = require('fs');
 const path = require('path');
 const S = (m) => require(path.join(__dirname, '..', 'shared', m));
 
@@ -591,6 +593,58 @@ relinkChecks().then(() => {
     mergeSnap('安浦聖;李杨', ['王佳'], ['李杨', '王佳']),
     '安浦聖;王佳'
   );
+
+  // -------------------------------------------------------------------------
+  section('数组更新指令 — 少写一个 $ 号会把整个对象当成一个元素写进库');
+
+  /**
+   * 扫源码盯住 { each: ... } 这个写法（2026-10-03 加的，起因是一次真实故障：
+   * 用户点「加入协办」提示成功，协办名单里却始终没有他）。
+   *
+   * ★ 为什么要扫源码而不是跑一遍：这类错误在云函数侧**不报错**、前端还弹成功，
+   *   只有把报文算出来才看得见：
+   *     db.command.push({ each: [x] })      → SDK 帮忙翻成 { $each: [x] } ✓
+   *     db.command.addToSet({ each: [x] })  → 原样透传 { each: [x] } ✗
+   *     db.command.pull({ each: [x] })      → 原样透传，匹配不到任何元素 ✗
+   *   结果是库里存成 collaboratorIds: [{each:["otw..."]}]（协办名单永远为空），
+   *   或者「退出协办」静默不删（本人以为自己退了，其实还在名单里）。
+   * ★ 正确写法：addToSet 用 { $each: [...] }，pull 传标量 openid。
+   * ★ 这条只能保证「没写出这个已知的错误形态」，不构成语义正确性证明 ——
+   *   真正的报文验证要靠仓库外的探针脚本（Node 里 require 真驱动 + UpdateSerializer）。
+   */
+  function stripComments(src) {
+    return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  }
+
+  function walkJs(dir, out) {
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+      // lib/ 是 sync-shared 往各云函数复制的生成副本，不是独立源码
+      if (e.name === 'node_modules' || e.name === 'lib') return;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) walkJs(full, out);
+      else if (e.name.endsWith('.js')) out.push(full);
+    });
+    return out;
+  }
+
+  const ROOT = path.join(__dirname, '..');
+  const scanned = walkJs(path.join(ROOT, 'cloudfunctions'), [])
+    .concat(walkJs(path.join(ROOT, 'shared'), []));
+
+  const offenders = [];
+  scanned.forEach((file) => {
+    const code = stripComments(fs.readFileSync(file, 'utf8'));
+    const re = /\.(addToSet|pull|pullAll|push|unshift)\s*\(\s*\{\s*each\b/g;
+    let m;
+    while ((m = re.exec(code))) {
+      // push / unshift 由 SDK 负责翻 each → $each，写 { each: ... } 是对的
+      if (m[1] === 'push' || m[1] === 'unshift') continue;
+      offenders.push(`${path.relative(ROOT, file)} 的 .${m[1]}({ each: ... })`);
+    }
+  });
+
+  check('扫到的都是源码文件（防止 walk 写错导致这一节空跑）', scanned.length > 5, true);
+  check('云函数与 shared 里没有 { each: ... } 形态的数组更新指令', offenders, []);
 
   console.log(`\n${'─'.repeat(50)}`);
   console.log(`通过 ${passed} 项，失败 ${failed} 项`);

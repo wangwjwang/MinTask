@@ -212,6 +212,16 @@ async function update(payload, ctx) {
  *
  * ★ 用 addToSet 而不是读改写：读改写在一人同时从两台设备加入、
  *   或多人并发加入时会丢更新。addToSet 是数据库层原子操作。
+ *
+ * ★ 多元素写法必须是 { $each: [...] }，那个 $ 号不能省（2026-10-03 修）。
+ *   坑在于 push 与 addToSet 的形参处理不一样：
+ *     db.command.push({ each: [x] })      → SDK 帮忙翻成 { $each: [x] } ✓
+ *     db.command.addToSet({ each: [x] })  → 原样透传 { each: [x] } ✗
+ *   少了 $ 号，MongoDB 不认这是"逐元素添加"，而是把整个对象当成**一个元素**
+ *   塞进数组 —— 库里变成 collaboratorIds: [{each:["otw..."]}]。
+ *   云函数不报错、前端还弹「已加入」，但协办名单里永远没有这个人：
+ *   myJoinedTasks 查的是 _.in([openid])，永远匹配不上；resolveNames 也解析不出姓名。
+ *   仓库里有一道防线：scripts/selfcheck.js 末尾那节会扫出 { each: ... } 形态。
  */
 async function join(payload, ctx) {
   await ctx.requireMember();
@@ -234,7 +244,7 @@ async function join(payload, ctx) {
     .doc(taskId)
     .update({
       data: {
-        collaboratorIds: ctx._.addToSet({ each: [ctx.openid] }),
+        collaboratorIds: ctx._.addToSet({ $each: [ctx.openid] }),
         updatedAt: ctx.db.serverDate(),
       },
     });
@@ -244,7 +254,15 @@ async function join(payload, ctx) {
   return { taskId, joined: true, ...snap };
 }
 
-/** 退出协办（仅本人退出自己） */
+/**
+ * 退出协办（仅本人退出自己）。
+ *
+ * ★ pull 传标量，不能写成 pull({ each: [x] })（2026-10-03 修）。
+ *   pull 的参数是**匹配条件**而不是"要删的元素列表"：传字符串是"删掉等于它的元素"，
+ *   传对象则被当成条件（{each:[...]} 等价于"删掉字段 each 等于 [...] 的元素"），
+ *   一个都匹配不上 —— 于是不报错、不删除，本人还以为退成功了。
+ *   要按多个值删就用 pull({ $in: [...] })，$ 号同样不能省。
+ */
 async function leave(payload, ctx) {
   await ctx.requireMember();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
@@ -259,7 +277,7 @@ async function leave(payload, ctx) {
     .doc(taskId)
     .update({
       data: {
-        collaboratorIds: ctx._.pull({ each: [ctx.openid] }),
+        collaboratorIds: ctx._.pull(ctx.openid),
         updatedAt: ctx.db.serverDate(),
       },
     });
@@ -268,7 +286,7 @@ async function leave(payload, ctx) {
   return { taskId, left: true, ...snap };
 }
 
-/** 主办人移除协办人 */
+/** 主办人移除协办人（pull 的写法坑同 leave，见上） */
 async function removeCollaborator(payload, ctx) {
   await ctx.requireMember();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
@@ -281,7 +299,7 @@ async function removeCollaborator(payload, ctx) {
     .doc(taskId)
     .update({
       data: {
-        collaboratorIds: ctx._.pull({ each: [targetOpenid] }),
+        collaboratorIds: ctx._.pull(targetOpenid),
         updatedAt: ctx.db.serverDate(),
       },
     });

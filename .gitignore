@@ -63,3 +63,5 @@ scripts/progress_records.import.json
 # make-collab-fix-import.js 生成，整份文档覆盖导入用。
 # 里面是真实姓名 + openid 的某一时刻快照，同样是派生物，不进仓库。
 scripts/tasks.collabfix.import.json
+# make-collab-each-fix-import.js 生成，同理（还原被写坏的 collaboratorIds）。
+scripts/tasks.colleachfix.import.json

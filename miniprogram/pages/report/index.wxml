@@ -22,6 +22,58 @@
     </view>
 
     <!--
+      ── 久无进展提醒 ─────────────────────────────────────────────
+      有的任务十天半月没人碰，混在几十条里就沉底了。这里把跨主办/协办
+      汇总去重后最久没动的几条拎到最上面 —— 位置本身就是这个功能的价值，
+      沉到列表里等于没做。
+      ★ 一条都没有时整块不渲染（wx:if），不留空位、不占一屏。
+      ★ 它不是第四个分组，是**跨前两组的子集**：条数不进 stats，
+        那三个数字与下方三个分组标题同源，塞进来就破坏了不变式。
+      ★ 任务名不换行（要全名点进详情），天数靠右对齐 —— 一列数字比一列
+        长短不一的标题更好扫。
+      ★ 名单超过阈值（page.js 的 STALE_COLLAPSE_AT）就只铺阈值那么多条，
+        最久没动的在前，其余折起来点开看 —— 有二十条就铺二十行的话，
+        它自己会把下面真正要看的分组挤下去。
+      ★ 展开状态不跨页面保留：切走再回来一律是折起的（onShow 里重置）。
+    -->
+    <view wx:if="{{stale.length}}" class="card report__stale">
+      <view class="row row--between report__stale-head">
+        <view class="row">
+          <view class="report__stale-dot"></view>
+          <text class="report__stale-title">{{staleDays}} 天以上没有新进展</text>
+        </view>
+        <text class="report__stale-count">{{stale.length}} 项</text>
+      </view>
+
+      <!--
+        折叠入口。★ 必须在名单**上方**，不能放下面：
+        它一旦放在末尾，展开时头顶多出一行，按钮就往下挪一行的高度 ——
+        用户按原位再点一下，点中的是新冒出来的那条**任务行**（任务行自己
+        也可点，会跳上报页），于是「展开完收不回去」，而且每次复现都一样。
+        放在上面，展开/收起它自己一动不动，连点两次必定是同一个按钮。
+        隐藏判据是条数（见 page.js 的 STALE_COLLAPSE_AT），不是"有没有折起来"。
+      -->
+      <view
+        wx:if="{{staleFoldable}}"
+        class="report__stale-more hit"
+        bindtap="onToggleStale"
+      >
+        <text>{{staleExpanded ? '收起 ▲' : '展开其余 ' + staleMore + ' 项 ▼'}}</text>
+      </view>
+
+      <view
+        wx:for="{{staleShown}}"
+        wx:key="_id"
+        class="report__stale-row hit"
+        data-task="{{item}}"
+        bindtap="onStaleTap"
+      >
+        <text class="report__stale-name ellipsis">{{item.task_name}}</text>
+        <text class="report__stale-days t-mono">{{item._idleDays}} 天</text>
+      </view>
+    </view>
+
+    <!--
       ── 区块 1：我主办的任务（在办）──────────────────────────────
       ★ 每组包一层 report__group：吸顶标题的吸附范围被限制在自己这一组内，
         滚过本组后会被下一组的标题顶走。不包的话标题的父容器就是 .page，

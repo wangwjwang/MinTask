@@ -34,3 +34,76 @@
 
 /* 「新加入协办」入口卡的样式已上提到 app.wxss 的 .entry-card
    （改任务页的「退出协办」入口是同一个视觉件，两页共用一份定义）。 */
+
+/*
+ * ── 久无进展提醒区 ──────────────────────────────────────────────────
+ * 位置在信息块下面、第一个分组上面。条数为 0 时整块不渲染，不留空位。
+ *
+ * ★ 为什么是白卡 + 琥珀色天数，而不是红底/黄底：
+ *   红＝受阻、黄＝有风险/逾期 这两个语义色在设计确定稿里已经被占满，
+ *   这里是「该去报一下了」的提醒，不是告警。白卡浮在 --bg 上做区分，
+ *   加一个 --tone-warn 的天数就够，不新增语义色。
+ *   （--tone-warn 是既有的「注意」色，与逾期黄同源，但呈现位置不同 ——
+ *     那边在卡片右下的日期上，不会混。）
+ * ★ 标题左上的小圆点是唯一的装饰：一列白卡里给这块一个第一眼标记。
+ */
+.report__stale {
+  /* .card 的 padding 是四边等值，行尾再多 8rpx 会显得下重上轻，收一点 */
+  padding-bottom: 8rpx;
+}
+
+.report__stale-head {
+  padding-bottom: 12rpx;
+}
+
+.report__stale-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: var(--tone-warn);
+  margin-right: 12rpx;
+}
+
+.report__stale-title {
+  font-size: var(--fs-sub);
+  color: var(--text);
+}
+
+.report__stale-count {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+/* 行间分隔线用 --divider，与 task-card / 表单页同款 */
+.report__stale-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-top: 2rpx solid var(--divider);
+}
+
+.report__stale-name {
+  flex: 1;
+  /* flex 子项默认 min-width:auto，不加这条 ellipsis 在长标题上不生效 */
+  min-width: 0;
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+
+.report__stale-days {
+  margin-left: var(--gap-sm);
+  font-size: var(--fs-caption);
+  color: var(--tone-warn);
+}
+
+/* 折叠入口。★ 位置在标题下面、名单上面（理由见 wxml 里的注释：放下方会
+   随展开往下挪，连点两次会误点到任务行）。
+   靠右，与分组标题上「收起 ▲ / 展开 ▼」的位置习惯一致；整行可点
+   （比文字本身大得多），所以不用给文字加 padding 撑点击区。 */
+.report__stale-more {
+  padding: 16rpx 0 12rpx;
+  border-top: 2rpx solid var(--divider);
+  text-align: right;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}

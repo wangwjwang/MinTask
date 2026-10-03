@@ -104,12 +104,69 @@ function progressWidth(progress) {
 }
 
 /**
+ * 多久没动就算「可能被忘了」—— 报任务页顶部提醒区的阈值。
+ *
+ * ★ 为什么不放 shared/constants.js：
+ *   放了就要跑 sync-shared，7 个云函数副本全变脏，按仓库纪律得重新部署
+ *   全部云函数 —— 为一个纯展示规则付这个代价不值。服务端不需要知道它。
+ *   这与 utils/theme.js「分类色不放 shared」是同一条理由。
+ *
+ * ★ 10 天是 2026-10-03 与用户确认的值，不是拍的。
+ */
+const STALE_DAYS = 10;
+
+/** 周期性任务不参与提醒：它们本来就按周期做，10 天没动是正常的 */
+const PERIODIC_TYPE = '周期性';
+
+/**
+ * 把 Date / 'YYYY-MM-DD' 统一成 'YYYY-MM-DD'，认不出返回空串。
+ * 三个日期字段的类型不一样：latestProgressAt / createdAt 是 Date 对象，
+ * start_date 是字符串，所以要在这里归一。
+ */
+function toDateStr(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return dates.isValidDateStr(value) ? value : '';
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? '' : dates.formatDate(d);
+}
+
+/**
+ * 久无进展的判据。
+ *
+ * 基准日三级回退：最新进展时间 → 开始日期 → 创建时间。
+ *   · 有进展就只认进展，不再看开始日期（否则一条老任务只要开始得早就永远提醒）；
+ *   · 没有进展退回开始日期，好处是**开始日期还没到的任务天然不算**
+ *     （天数会是负数），不用为"刚建还没轮到做"另写一条规则；
+ *   · 都没有（脏数据）返回 null，宁可不提醒，也不显示成"0 天没动"。
+ *
+ * 天数用 dates.daysFromToday 算，与卡片上「逾期 N 天」同一套整天口径 ——
+ * 不另写一个天数差实现，免得两处对不齐。
+ */
+function idleInfo(task) {
+  const base = toDateStr(task.latestProgressAt)
+    || toDateStr(task.start_date)
+    || toDateStr(task.createdAt);
+  if (!base) return { days: null, stale: false };
+
+  const diff = dates.daysFromToday(base); // 负数=在过去
+  if (diff === null) return { days: null, stale: false };
+
+  // diff 为 0 时 -diff 得到 -0，归一成 0（否则这个值会一路带到模板和数据里）
+  const days = diff === 0 ? 0 : -diff;
+  const stale = days >= STALE_DAYS
+    && task.stage !== '已完成'
+    && task.task_type !== PERIODIC_TYPE;
+  return { days, stale };
+}
+
+/**
  * 给任务卡片补上所有展示用派生字段。
  * 所有列表页统一调它，保证卡片显示口径一致。
  */
 function decorateTask(task) {
   if (!task) return task;
   const due = dueInfo(task.due_date, task.stage);
+  const idle = idleInfo(task);
   return Object.assign({}, task, {
     _statusTone: statusTone(task.status),
     _stageTone: stageTone(task.stage),
@@ -126,6 +183,13 @@ function decorateTask(task) {
     _progressWidth: progressWidth(task.progress),
     _collaboratorText: collaboratorText(task.collaborator),
     _hasBlocker: !!task.hasOpenBlocker,
+    /**
+     * 距最后一次进展多少天（没有可用日期时为 null）。
+     * 天数是**事实**，_stale 是**判断**（还排除了周期性与已完成）——
+     * 分开给，页面想显示"30 天没动"时不必重新推导。
+     */
+    _idleDays: idle.days,
+    _stale: idle.stale,
   });
 }
 
@@ -135,6 +199,7 @@ function decorateTasks(tasks) {
 }
 
 module.exports = {
+  STALE_DAYS,
   statusTone,
   stageTone,
   dueInfo,
@@ -143,6 +208,7 @@ module.exports = {
   timeAgo,
   fullTime,
   progressWidth,
+  idleInfo,
   decorateTask,
   decorateTasks,
 };

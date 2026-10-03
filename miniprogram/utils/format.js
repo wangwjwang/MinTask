@@ -8,6 +8,7 @@
 
 const C = require('../shared/constants');
 const dates = require('../shared/dates');
+const periodic = require('../shared/periodic');
 const theme = require('./theme');
 
 /** 状态徽标配色 key */
@@ -237,6 +238,70 @@ function decorateTasks(tasks) {
   return (tasks || []).map(decorateTask);
 }
 
+// ── 计划（periodic_templates）──────────────────────────────────────────────
+
+/**
+ * evaluate 的 reason → 行上的状态标记。
+ *
+ * ★ 色号刻意克制：只有「周期类型无法识别」用了黄色告警，其余一律中性灰。
+ *   红/黄/绿在这个应用里已经全被任务状态占满（受阻/有风险/已完成），
+ *   计划的本期过没过不是那种级别的信息 —— 借一个红色过来，
+ *   用户会以为计划出事了。
+ */
+const PLAN_STATE_TEXT = {
+  ok: '进行中',
+  not_started: '待开始',
+  period_expired: '本期已过',
+  disabled: '已停用',
+  bad_period_type: '周期类型无法识别',
+};
+const PLAN_STATE_TONE = {
+  ok: 'badge--active',
+  not_started: 'badge--idle',
+  period_expired: 'badge--idle',
+  disabled: 'badge--idle',
+  bad_period_type: 'badge--warn',
+};
+
+/**
+ * 给一份计划补上展示用的派生字段。
+ *
+ * ★ 放在这里而不是各自页面里：「管理我的计划」和任务看板的「周期性计划」段
+ *   都要回答同一个问题 —— 这个计划现在处于什么状态、本期从哪天到哪天。
+ *   两处各写一份，迟早会一个说"待开始"、另一个已经生成出任务了。
+ *
+ * 状态取 evaluate().reason（与云函数是同一个函数），日期与任务名则另算 ——
+ * evaluate 在 disabled / 认不出周期类型时会短路返回空，而这两种情况下
+ * 排期和本期日期恰恰是用户最想看的（"我停掉的那个计划原本是什么节奏"）。
+ *
+ * @param {object} t      计划（periodic_templates 的一条）
+ * @param {string} [today] YYYY-MM-DD，省略即今天。只有测试会显式传
+ */
+function decoratePlan(t, today) {
+  if (!t) return t;
+  const day = today || dates.todayStr();
+  const type = periodic.normalizePeriodType(t.periodType);
+  const periodKey = type ? periodic.periodKeyFor(type, day) : '';
+  const span = periodKey ? periodic.periodDates(t, periodKey) : { startDate: '', dueDate: '' };
+  const ev = periodic.evaluate(t, day);
+
+  return Object.assign({}, t, {
+    _schedule: periodic.describeOffsets(t),
+    _taskName: periodKey
+      ? periodic.renderName(t.taskNameTemplate, { periodKey, deadline: span.dueDate })
+      : '',
+    _periodText: periodKey ? `${span.startDate} — ${span.dueDate}` : '',
+    _state: ev.reason,
+    _stateText: PLAN_STATE_TEXT[ev.reason] || '',
+    _stateTone: PLAN_STATE_TONE[ev.reason] || 'badge--idle',
+  });
+}
+
+/** 批量装饰计划 */
+function decoratePlans(plans, today) {
+  return (plans || []).map((p) => decoratePlan(p, today));
+}
+
 module.exports = {
   STALE_DAYS,
   statusTone,
@@ -253,4 +318,6 @@ module.exports = {
   idleInfo,
   decorateTask,
   decorateTasks,
+  decoratePlan,
+  decoratePlans,
 };

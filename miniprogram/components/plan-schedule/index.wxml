@@ -1,0 +1,99 @@
+<!-- components/plan-schedule 计划排期（多久一次 + 每期从几号到几号） -->
+<view class="sched">
+
+  <picker mode="selector" range="{{periodTypeOptions}}" value="{{periodTypeIdx}}" bindchange="onPeriodTypeChange">
+    <view class="field--picker">
+      <view class="field__label field__label--required picker__label">多久一次</view>
+      <view class="row">
+        <text class="field__value">{{periodTypeOptions[periodTypeIdx]}}</text>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+  </picker>
+
+  <!-- 月度的月份序号恒为 1，不占一行；季度/年度才需要选第几个月 -->
+  <picker
+    wx:if="{{periodTypeIdx > 0}}"
+    mode="selector"
+    range="{{monthIdxOptions}}"
+    value="{{startMonthIdx - 1}}"
+    data-field="startMonthIdx"
+    bindchange="onOffsetChange"
+  >
+    <view class="field--picker">
+      <view class="field__label picker__label">开始 · 第几个月</view>
+      <view class="row">
+        <text class="field__value">{{monthIdxOptions[startMonthIdx - 1]}}</text>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+  </picker>
+
+  <picker
+    mode="selector"
+    range="{{dayOptions}}"
+    value="{{startDay - 1}}"
+    data-field="startDay"
+    bindchange="onOffsetChange"
+  >
+    <view class="field--picker">
+      <view class="field__label picker__label">开始 · 几号</view>
+      <view class="row">
+        <text class="field__value">{{dayOptions[startDay - 1]}}</text>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+  </picker>
+
+  <picker
+    wx:if="{{periodTypeIdx > 0}}"
+    mode="selector"
+    range="{{monthIdxOptions}}"
+    value="{{endMonthIdx - 1}}"
+    data-field="endMonthIdx"
+    bindchange="onOffsetChange"
+  >
+    <view class="field--picker">
+      <view class="field__label picker__label">截止 · 第几个月</view>
+      <view class="row">
+        <text class="field__value">{{monthIdxOptions[endMonthIdx - 1]}}</text>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+  </picker>
+
+  <picker
+    mode="selector"
+    range="{{dayOptions}}"
+    value="{{endDay - 1}}"
+    data-field="endDay"
+    bindchange="onOffsetChange"
+  >
+    <view class="field--picker">
+      <view class="field__label picker__label">截止 · 几号</view>
+      <view class="row">
+        <text class="field__value">{{dayOptions[endDay - 1]}}</text>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+  </picker>
+
+  <!--
+    预览区是"系统将要做的事"，不是又一个待填的输入项 ——
+    所以用浅底 + 小字，标签窄、值占满，视觉上明确低于上面的表单行。
+  -->
+  <view class="sched__preview">
+    <view class="sched__row">
+      <text class="sched__k">排期</text>
+      <text class="sched__v">{{planScheduleText}}</text>
+    </view>
+    <view class="sched__row">
+      <text class="sched__k">本期</text>
+      <text class="sched__v t-mono">{{planPreviewDates}}</text>
+    </view>
+    <view class="sched__row">
+      <text class="sched__k">任务名</text>
+      <text class="sched__v">{{planPreviewName}}</text>
+    </view>
+  </view>
+</view>

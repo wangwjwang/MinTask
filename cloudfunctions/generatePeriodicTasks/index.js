@@ -18,7 +18,8 @@
  * 本函数同时支持两种调用方式：
  *   1. 定时触发器 —— 无 openid，直接执行
  *   2. 管理员手动补跑 —— 经 callFunction 调用，需管理员身份
- *      payload: { periodKey?: '2026-11', dryRun?: boolean }
+ *      payload: { asOf?: '2026-09-05', dryRun?: boolean }
+ *      asOf 表示"假装今天是哪天"，想补哪一期就传那一期的开始日。
  * ---------------------------------------------------------------------------
  */
 
@@ -26,6 +27,17 @@ const cloud = require('wx-server-sdk');
 const { runGenerate } = require('./lib/shared/periodicRunner');
 const { buildCtx } = require('./lib/shared/ctx');
 const { BizError, Codes, describeInfraError } = require('./lib/shared/errors');
+const { isValidDateStr } = require('./lib/shared/dates');
+
+/** 把 asOf 读成 'YYYY-MM-DD'；没给返回 undefined（按真实今天算）。 */
+function readAsOf(v) {
+  if (v === undefined || v === null || v === '') return undefined;
+  const s = String(v);
+  if (!isValidDateStr(s)) {
+    throw new BizError(Codes.INVALID_PARAM, '日期格式应为 YYYY-MM-DD，如 2026-09-05');
+  }
+  return s;
+}
 
 /**
  * 判断是否来自定时触发器。
@@ -46,7 +58,7 @@ exports.main = async (event = {}) => {
     try {
       const result = await runGenerate(db, { operator: 'timer' });
       console.log(
-        `[generatePeriodicTasks] 完成 周期=${result.periodKey} 新建=${result.created.length} 跳过=${result.skipped.length} 失败=${result.failed.length}`
+        `[generatePeriodicTasks] 完成 以 ${result.today} 为准 新建=${result.created.length} 跳过=${result.skipped.length} 失败=${result.failed.length}`
       );
       return { ok: true, data: result };
     } catch (e) {
@@ -61,9 +73,10 @@ exports.main = async (event = {}) => {
     const ctx = buildCtx(event);
     await ctx.requireAdmin();
 
+    const payload = event.payload || {};
     const result = await runGenerate(db, {
-      periodKey: event.periodKey || event.payload && event.payload.periodKey,
-      dryRun: !!(event.dryRun || (event.payload && event.payload.dryRun)),
+      today: readAsOf(event.asOf || payload.asOf),
+      dryRun: !!(event.dryRun || payload.dryRun),
       operator: ctx.openid,
     });
     return { ok: true, data: result };

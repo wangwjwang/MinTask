@@ -70,6 +70,19 @@ Page({
     /** AI 精简状态 */
     aiBusy: false,
 
+    /**
+     * 描述框当前内容是否**已经精简过**。
+     *
+     * ★ 为什么要有它：一次成功精简要花一次 DeepSeek 调用。用户看到结果后
+     *   顺手再点一下（怀疑没生效、或者手快），内容已是精简后的文本，
+     *   再送一次纯属白烧 token。
+     *
+     * 置 true：精简成功时。置 false：用户再改一次描述框时。
+     * ★ 失败的**不置 true** —— 失败时输入框内容一个字没变，重试是合理动作；
+     *   锁住的话一次网络抖动就要用户先随便改个字才能重试。
+     */
+    aiLocked: false,
+
     submitting: false,
     /** 幂等令牌。提交成功后才换新的，防止连点/重试产生重复进展 */
     token: '',
@@ -134,19 +147,22 @@ Page({
   /**
    * AI 精简。默认关闭，callAI 返回 aiApplied:false 时只提示原因，不阻断。
    * ★ callAI 云函数在任何异常下都返回原文，从不抛错，所以这里的内容永远可用。
+   * ★ 成功后置 aiLocked，按钮变灰直到用户再改描述 —— 见 data.aiLocked 的说明。
+   * ★ 任务一起发过去：AI 看不到页面，不知道在整理哪件事就只能泛泛而谈。
    */
   async onAiRefine() {
     const text = (this.data.description || '').trim();
     if (!text) {
+      // 按钮在空内容时本来就是灰的，这里只是兜底（比如输入后又全删）
       toast.toast('请先输入内容');
       return;
     }
 
     this.setData({ aiBusy: true });
     try {
-      const res = await api.aiApi.refine(text);
+      const res = await api.aiApi.refine(text, this.data.task);
       if (res.aiApplied) {
-        this.setData({ description: res.text });
+        this.setData({ description: res.text, aiLocked: true });
         if (res.fields) {
           // AI 可能从原文里提取出卡壳与需支持，已填的以用户为准，不覆盖
           const patch = {};
@@ -181,7 +197,18 @@ Page({
 
   onInput(e) {
     const field = e.currentTarget.dataset.field;
-    this.setData({ [field]: e.detail.value });
+    const patch = { [field]: e.detail.value };
+
+    /**
+     * 改动描述 → 解锁「AI 精简」按钮（见 data.aiLocked）。
+     *
+     * ★ 必须限定 field === 'description'。本方法是三个 textarea 共用的
+     *   （描述 / 卡壳原因 / 需要支持），无条件解锁的话，用户改一下"卡壳原因"
+     *   就会把描述的锁解开 —— 再点 AI 就是白烧 token，而且没人看得出来。
+     */
+    if (field === 'description' && this.data.aiLocked) patch.aiLocked = false;
+
+    this.setData(patch);
   },
 
   onProgressChange(e) {

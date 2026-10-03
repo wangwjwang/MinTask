@@ -42,14 +42,22 @@
         <text class="t-muted">{{description.length}} / 2000</text>
       </view>
 
-      <!-- AI 精简按钮：未启用时点击会明确提示，不阻断 -->
+      <!--
+        AI 精简按钮：未启用时点击会明确提示，不阻断。
+
+        三种情况点不动：
+          · !description —— 空内容没什么可精简的
+          · aiBusy       —— 上一次还在跑
+          · aiLocked     —— 当前内容已经精简过了（见 data.aiLocked）
+        锁住时文字改成「已精简」：一个没理由的灰按钮，用户会以为坏了。
+      -->
       <button
         wx:if="{{showAiButton}}"
         class="btn btn--plain btn--sm add__ai"
         loading="{{aiBusy}}"
-        disabled="{{aiBusy}}"
+        disabled="{{aiBusy || aiLocked || !description}}"
         bindtap="onAiRefine"
-      >AI 精简</button>
+      >{{aiLocked ? '已精简' : 'AI 精简'}}</button>
     </view>
 
     <!-- ── 卡壳 / 需要支持 ───────────────────────────────────────── -->

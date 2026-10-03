@@ -21,6 +21,8 @@
  *   2. app.json              —— tabBar 的 color / selectedColor 是静态 JSON
  *   3. images/tabbar/*.png   —— 已经栅格化的图标，跑 `node scripts/gen-tabbar-icons.js`
  *                              重新生成（否则会出现"图标是旧蓝、文字是新蓝"）
+ *   4. custom-tab-bar/index.wxss —— ★ 它的 var() 里都写了兜底字面色值，
+ *                              同样要跟这里一起改（为什么带兜底，见该文件头部）
  * ---------------------------------------------------------------------------
  */
 
@@ -121,10 +123,12 @@ page {
   padding-bottom: calc(128rpx + env(safe-area-inset-bottom));
 }
 
-/* 既有固定操作栏、又是 Tab 页（只有「报任务」）：两层让位要叠加 */
-.page--with-footer.page--tabbar {
-  padding-bottom: calc(310rpx + env(safe-area-inset-bottom));
-}
+/*
+ * ★ 这里原来还有一条 `.page--with-footer.page--tabbar`（两层让位叠加），
+ *   唯一的使用者是「报任务」—— 它底部那条固定按钮栏 2026-10-03 改成了
+ *   页面内的入口行，不再需要让位，规则随之删除。
+ *   将来若真给 Tab 页加回固定操作栏，让位高度 = 两条栏之和。
+ */
 
 /* 卡片：靠底色对比从背景里浮起来，**不用阴影** */
 .card {
@@ -319,14 +323,12 @@ page {
 }
 
 /*
- * 操作栏落在 Tab 页里时（只有「报任务」）：抬到自定义 tabBar 之上。
- * ★ z-index 不用动 —— tabBar 是 100，本来就压在操作栏上面；
- *   但那样操作栏会**被 tabBar 盖住一截**，看起来像按钮被削了一半。
- *   所以要把它的 bottom 抬起来，而不是靠层级去抢。
+ * ★ 这里原来还有一条 `.footer-bar--tabbar`（把操作栏抬到自定义 tabBar 之上），
+ *   唯一的使用者是「报任务」，2026-10-03 那条栏改成了页面内的入口行，规则删除。
+ *   将来若要给 Tab 页加固定操作栏：z-index 不用抢（tabBar 是 100，本来就压在上面），
+ *   但 bottom 要抬到 calc(100rpx + env(safe-area-inset-bottom))，
+ *   否则操作栏会被 tabBar 盖住一截，看起来像按钮被削了一半。
  */
-.footer-bar--tabbar {
-  bottom: calc(100rpx + env(safe-area-inset-bottom));
-}
 
 /* ─────────────────────────────────────────────────────────────────────────
    表单
@@ -608,33 +610,6 @@ page {
  */
 .entry-card .field__arrow {
   font-size: 40rpx;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   筛选胶囊 —— 包在 <picker> 里的当前筛选项
-   任务看板（分类）与改任务（阶段）共用。只定外观，外边距由各页面自定。
-   ★ width 不设 100%：picker 是行内元素，胶囊要缩成内容宽度才像个按钮，
-     撑满整行会看起来像一张卡片，失去"可点"的暗示。
-   ───────────────────────────────────────────────────────────────────────── */
-
-.filter-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 12rpx 24rpx;
-  border-radius: var(--radius-full);
-  background: var(--selected-bg);
-  color: var(--primary);
-  font-size: var(--fs-sub);
-  font-weight: 500;
-}
-
-.filter-pill__label {
-  line-height: 1;
-}
-
-.filter-pill__arrow {
-  margin-left: 10rpx;
-  font-size: var(--fs-micro);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

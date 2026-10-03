@@ -125,18 +125,174 @@ check('当月末（无数字）', periodic.deadlineOf('当月末', '2026-10'), '
 check('空规则取月末', periodic.deadlineOf('', '2026-02'), '2026-02-28');
 
 // ---------------------------------------------------------------------------
-section('周期类型过滤 — 季/年周期不该每月都生成');
+section('周期计划 — 期内偏移算绝对日期');
 
-const tpl = (over) => Object.assign({ _id: 't1', name: 'T', enabled: true, periodType: 'monthly' }, over);
+check('月度：第 1 个月 5 号', periodic.dateInPeriod('2026-10', 1, 5), '2026-10-05');
+check('季度：本季度第 3 个月 20 号', periodic.dateInPeriod('2026-07', 3, 20), '2026-09-20');
+check('年度：本年度第 12 个月 25 号', periodic.dateInPeriod('2026-01', 12, 25), '2026-12-25');
+check('超当月天数收敛到月末（2 月）', periodic.dateInPeriod('2026-02', 1, 30), '2026-02-28');
+check('闰年 2 月', periodic.dateInPeriod('2028-02', 1, 30), '2028-02-29');
+check('月份溢出到次年', periodic.dateInPeriod('2026-11', 3, 5), '2027-01-05');
+check('Q4 第 3 个月不跨年', periodic.dateInPeriod('2026-10', 3, 20), '2026-12-20');
 
-check('月度：每月生成', periodic.shouldGenerate(tpl({}), '2026-10'), true);
-check('停用的模板不生成', periodic.shouldGenerate(tpl({ enabled: false }), '2026-10'), false);
-check('季度：1 月生成', periodic.shouldGenerate(tpl({ periodType: 'quarterly' }), '2026-01'), true);
-check('季度：4 月生成', periodic.shouldGenerate(tpl({ periodType: 'quarterly' }), '2026-04'), true);
-check('季度：5 月不生成', periodic.shouldGenerate(tpl({ periodType: 'quarterly' }), '2026-05'), false);
-check('年度：1 月生成', periodic.shouldGenerate(tpl({ periodType: 'yearly' }), '2026-01'), true);
-check('年度：2 月不生成', periodic.shouldGenerate(tpl({ periodType: 'yearly' }), '2026-02'), false);
-check('未知周期类型：保守不生成', periodic.shouldGenerate(tpl({ periodType: 'weekly' }), '2026-10'), false);
+// ---------------------------------------------------------------------------
+section('周期计划 — 今天属于哪一期（返回期首月）');
+
+check('月度看当月', periodic.periodKeyFor('monthly', '2026-08-15'), '2026-08');
+check('季度取季首月', periodic.periodKeyFor('quarterly', '2026-08-15'), '2026-07');
+check('季末月仍算本季', periodic.periodKeyFor('quarterly', '2026-09-30'), '2026-07');
+check('Q4 取 10 月', periodic.periodKeyFor('quarterly', '2026-12-31'), '2026-10');
+check('年度取 1 月', periodic.periodKeyFor('yearly', '2026-08-15'), '2026-01');
+
+// ---------------------------------------------------------------------------
+/*
+ * 核心规则：本期的**开始日到了**才生成，不是「每月 1 号」。
+ * 用「≥ 开始日」而不是「== 开始日」，是为了容忍漏跑 ——
+ * 5 号那天环境异常没跑成，6 号跑照样生成；重复生成由确定性 _id 拦下。
+ *
+ * ★ evaluate().due 的语义是「本期任务现在应该存在了」，
+ *   不是「现在要插一条」。「是不是已经存在」由 runner 查库判断 ——
+ *   evaluate 是纯函数，看不到库里有什么。
+ */
+section('周期计划 — 开始日到了才生成');
+
+// 月度：每月 5 号开始、25 号截止
+const mTpl = (over) => Object.assign({
+  _id: 't1', name: 'T', enabled: true, periodType: 'monthly',
+  startMonthIdx: 1, startDay: 5, endMonthIdx: 1, endDay: 25,
+}, over);
+
+check('4 号还没到开始日 → 不生成', periodic.evaluate(mTpl({}), '2026-10-04').due, false);
+check('原因是 not_started', periodic.evaluate(mTpl({}), '2026-10-04').reason, 'not_started');
+check('5 号当天 → 生成', periodic.evaluate(mTpl({}), '2026-10-05').due, true);
+check('漏跑一天，6 号补上 → 生成', periodic.evaluate(mTpl({}), '2026-10-06').due, true);
+check('25 号当天仍可补跑 → 生成', periodic.evaluate(mTpl({}), '2026-10-25').due, true);
+check('26 号本期已过期 → 不生成', periodic.evaluate(mTpl({}), '2026-10-26').due, false);
+check('原因是 period_expired', periodic.evaluate(mTpl({}), '2026-10-26').reason, 'period_expired');
+check('进入下月开始日 → 恢复生成', periodic.evaluate(mTpl({}), '2026-11-05').due, true);
+check('停用的计划不生成', periodic.evaluate(mTpl({ enabled: false }), '2026-10-05').due, false);
+check('停用的原因是 disabled', periodic.evaluate(mTpl({ enabled: false }), '2026-10-05').reason, 'disabled');
+
+// 季度：本季度第 1 个月 5 号开始、第 3 个月 20 号截止
+const qTpl = (over) => Object.assign({
+  _id: 'q1', name: 'Q', enabled: true, periodType: 'quarterly',
+  startMonthIdx: 1, startDay: 5, endMonthIdx: 3, endDay: 20,
+}, over);
+
+check('Q3：7/4 不生成', periodic.evaluate(qTpl({}), '2026-07-04').due, false);
+check('Q3：7/5 生成', periodic.evaluate(qTpl({}), '2026-07-05').due, true);
+check('Q3：8 月仍是本期（已存在则由 _id 拦下）', periodic.evaluate(qTpl({}), '2026-08-15').due, true);
+check('Q3：本期 periodKey 是季首月', periodic.evaluate(qTpl({}), '2026-09-01').periodKey, '2026-07');
+check('Q3：9/21 过期', periodic.evaluate(qTpl({}), '2026-09-21').due, false);
+check('Q4：10/5 生成', periodic.evaluate(qTpl({}), '2026-10-05').due, true);
+check('Q4：10/4 不生成', periodic.evaluate(qTpl({}), '2026-10-04').due, false);
+
+// 年度：4 月 5 号开始、12 月 25 号截止（不跟自然年走的年度计划）
+const yTpl = (over) => Object.assign({
+  _id: 'y1', name: 'Y', enabled: true, periodType: 'yearly',
+  startMonthIdx: 4, startDay: 5, endMonthIdx: 12, endDay: 25,
+}, over);
+
+check('年度：4/4 不生成', periodic.evaluate(yTpl({}), '2026-04-04').due, false);
+check('年度：4/5 生成', periodic.evaluate(yTpl({}), '2026-04-05').due, true);
+check('年度：次年 1 月还没到开始日', periodic.evaluate(yTpl({}), '2027-01-10').due, false);
+check('年度：12/26 过期', periodic.evaluate(yTpl({}), '2026-12-26').due, false);
+
+// ---------------------------------------------------------------------------
+section('周期计划 — 名字前缀与本期起止');
+
+check(
+  '月度：中文年月前缀',
+  periodic.evaluate(mTpl({ taskNameTemplate: '{{YYYY年MM月}}写报告' }), '2026-10-05').taskName,
+  '2026年10月写报告'
+);
+check('季度占位符 → 三季度', periodic.renderName('{{YYYY}}年{{季度}}检查', { periodKey: '2026-07' }), '2026年三季度检查');
+check('Q4 → 四季度', periodic.renderName('{{季度}}', { periodKey: '2026-10' }), '四季度');
+check('Q1 → 一季度', periodic.renderName('{{季度}}', { periodKey: '2026-01' }), '一季度');
+check('月度模板里的季度 = 该月所属季度', periodic.renderName('{{季度}}', { periodKey: '2026-02' }), '一季度');
+check('年度前缀不需要新占位符', periodic.renderName('{{YYYY}}年 写报告', { periodKey: '2026-01' }), '2026年 写报告');
+
+// 前缀规则的真源：前端预览与服务端渲染必须走同一份
+const withPrefix = (type, name, pk) =>
+  periodic.renderName(periodic.NAME_PREFIX[type] + name, { periodKey: pk, deadline: '' });
+check('月度前缀', withPrefix('monthly', '写报告', '2026-10'), '2026年10月写报告');
+check('季度前缀', withPrefix('quarterly', '检查', '2026-07'), '2026年三季度检查');
+check('年度前缀', withPrefix('yearly', '总结', '2026-01'), '2026年总结');
+check('周期类型 → recur_freq（月）', periodic.RECUR_FREQ_OF.monthly, '每月');
+check('周期类型 → recur_freq（季）', periodic.RECUR_FREQ_OF.quarterly, '每季');
+check('周期类型 → recur_freq（年）', periodic.RECUR_FREQ_OF.yearly, '每年');
+
+// ★ 派生的 recur_freq 必须是合法枚举值，否则云函数写库时会被校验挡下
+check(
+  '派生的 recur_freq 都在枚举内',
+  Object.values(periodic.RECUR_FREQ_OF).every((v) => C.RECUR_FREQ.indexOf(v) !== -1),
+  true
+);
+check(
+  'NAME_PREFIX 覆盖全部周期类型',
+  Object.keys(periodic.MONTHS_PER_PERIOD).every((k) => periodic.NAME_PREFIX[k] && periodic.RECUR_FREQ_OF[k]),
+  true
+);
+check('月度计划开始日', periodic.evaluate(mTpl({}), '2026-10-05').startDate, '2026-10-05');
+check('季度计划开始日', periodic.evaluate(qTpl({}), '2026-07-05').startDate, '2026-07-05');
+check('季度计划截止日', periodic.evaluate(qTpl({}), '2026-07-05').dueDate, '2026-09-20');
+check('年度计划截止日', periodic.evaluate(yTpl({}), '2026-04-05').dueDate, '2026-12-25');
+
+// ---------------------------------------------------------------------------
+/*
+ * 老模板兼容：2026-10-03 之前建的模板只有 deadlineRule 这个字符串规则，
+ * 没有 startMonthIdx/startDay 等字段。它们仍要能跑：
+ * 开始日退回「当期 1 号」，截止日仍按字符串规则解析。
+ */
+section('周期计划 — 老模板（只有 deadlineRule 字符串）仍能跑');
+
+const legacy = { _id: 'L', name: 'L', enabled: true, periodType: 'monthly', deadlineRule: '当月 25 号' };
+check('开始日退回当月 1 号', periodic.evaluate(legacy, '2026-10-05').startDate, '2026-10-01');
+check('截止日仍按字符串规则', periodic.evaluate(legacy, '2026-10-05').dueDate, '2026-10-25');
+check('1 号就生成', periodic.evaluate(legacy, '2026-10-01').due, true);
+check('上个月末不生成', periodic.evaluate(legacy, '2026-09-30').due, false);
+
+// ---------------------------------------------------------------------------
+section('周期计划 — 未识别的周期类型保守跳过');
+
+check('weekly 不生成', periodic.evaluate(mTpl({ periodType: 'weekly' }), '2026-10-05').due, false);
+check('原因是 bad_period_type', periodic.evaluate(mTpl({ periodType: 'weekly' }), '2026-10-05').reason, 'bad_period_type');
+
+// ---------------------------------------------------------------------------
+section('周期计划 — 一句话描述排期（recur_rule 的文案）');
+
+check(
+  '月度：每月几号到几号',
+  periodic.describeOffsets(mTpl({ startDay: 5, endDay: 25 })),
+  '每月5日—25日'
+);
+check(
+  '季度：本季第几个月的几号',
+  periodic.describeOffsets(qTpl({ startMonthIdx: 1, startDay: 5, endMonthIdx: 3, endDay: 20 })),
+  '每季第1个月5日—第3个月20日'
+);
+check(
+  '年度：本年度几月几号',
+  periodic.describeOffsets(yTpl({ startMonthIdx: 4, startDay: 5, endMonthIdx: 12, endDay: 25 })),
+  '每年4月5日—12月25日'
+);
+check('周期类型认不出就不编文案', periodic.describeOffsets({ periodType: 'weekly' }), '');
+check('没填偏移时给可读的缺省', periodic.describeOffsets({ periodType: 'monthly' }), '每月1日—31日');
+check('越界的偏移不编出错误日期', periodic.describeOffsets({ periodType: 'monthly', startDay: 99 }), '每月1日—31日');
+
+// ---------------------------------------------------------------------------
+section('周期计划 — buildPlan 汇总');
+
+const bp = periodic.buildPlan(
+  [mTpl({ taskNameTemplate: '{{YYYY年MM月}}写报告' }), qTpl({ enabled: false })],
+  '2026-10-05'
+);
+check('只收集该生成的', bp.plan.length, 1);
+check('plan 带渲染后的任务名', bp.plan[0].taskName, '2026年10月写报告');
+check('plan 带确定性 _id', bp.plan[0].docId, 'pt-t1-2026-10');
+check('plan 带本期开始日', bp.plan[0].startDate, '2026-10-05');
+check('停用的进 skipped', bp.skipped.length, 1);
+check('skipped 带原因', bp.skipped[0].reason, 'disabled');
 
 // ---------------------------------------------------------------------------
 section('幂等 _id — 确定性是防重复生成的根基');
@@ -221,6 +377,25 @@ check('openid 为空拒绝一切', perm.canEditTask(task, ''), false);
 check('openid 为 undefined 拒绝一切', perm.canEditTask(task, undefined), false);
 check('collaboratorIds 缺失不崩', perm.isParticipant({ leaderId: 'x' }, 'y'), false);
 check('task 为 null 不崩', perm.isLeader(null, 'x'), false);
+
+// ---------------------------------------------------------------------------
+/*
+ * 周期计划的归属判据。计划是「谁主办谁负责」的东西：
+ * 主办人自己就能改自己的（包括普通成员建给自己用的月度计划）；
+ * 管理员兜底 —— 成员离职/换岗后，那些计划会变成没人能改的僵尸，
+ * 而它每个月还在自动往库里生成任务。
+ */
+section('周期计划归属 — 主办人或管理员');
+
+const plan = { _id: 'p1', ownerId: 'ou_zhang', ownerName: '张三' };
+check('主办人可管自己的计划', perm.canManageTemplate(plan, 'ou_zhang', false), true);
+check('协办人不可管（不在 ownerId 里）', perm.canManageTemplate(plan, 'ou_li', false), false);
+check('外人不可管', perm.canManageTemplate(plan, 'ou_wang', false), false);
+check('管理员可管他人的计划', perm.canManageTemplate(plan, 'ou_wang', true), true);
+check('openid 为空即便管理员也不放行', perm.canManageTemplate(plan, '', true), false);
+check('计划为 null 不崩', perm.canManageTemplate(null, 'ou_zhang', true), false);
+// ★ 姓名不参与判定：同名不同 openid 拿不到管理权
+check('同名不同 openid 拿不到管理权', perm.canManageTemplate(plan, 'ou_other', false), false);
 
 // ---------------------------------------------------------------------------
 section('卡壳解决权限');

@@ -4,7 +4,7 @@
  * 任务角度的看板（需求第 5 节 Tab3）：
  *   - 按分段切换（周期性 / 进行中 / 已完成）—— 后两段用 stage 而不是 status，
  *     因为 status 是"健康度"语义（正常/有风险/受阻），不是阶段
- *   - 支持按任务分类（category）筛选视图
+ *   - 分段内按任务分类（category）分组，组标题吸顶并带条数
  *   - 卡壳任务高亮：直接读 tasks.hasOpenBlocker 冗余字段，
  *     不做"拉任务→拉进展→逐条比对"的关联查询
  *   - 点击卡片下钻到任务详情页
@@ -22,15 +22,30 @@
  *   代价是看不到"三列并排的全貌"，用分段上的计数补回来 ——
  *   一眼仍能看出每个分段各有多少任务。
  *
- * ★ v2.1：「未开始」段换成「周期性」段（2026-10-03 与用户确认）。
- *   理由：未开始是新建任务与周期生成器的默认阶段（taskRepo 的
- *   `stage: fields.stage || '未开始'`），实际数据里没有存在感；而周期任务
- *   更需要按周期排开来看。周期段按 task_type 归类、平铺、按周期排序。
- *   ★ 由此产生两处**已确认的取舍**，不是 bug：
- *     1. 分段不再互斥。周期任务同时有自己的阶段，会既出现在「周期性」段、
- *        也出现在它所属的阶段段里。所以三段计数之和会大于顶部「共 N 项」。
- *     2. 未开始且非周期性的任务（刚用报任务建出来、还没人动过阶段的）
- *        不再有任何分段收它，只能从改任务页进。
+ * ★ v2.1：「未开始」段换成非阶段段（2026-10-03 与用户确认）。未开始是新建任务
+ *   与周期生成器的默认阶段（taskRepo 的 `stage: fields.stage || '未开始'`），
+ *   实际数据里没有存在感。代价：未开始且非周期性的任务（刚用报任务建出来、
+ *   还没人动过阶段的）不再有任何分段收它，入口退回「报任务」页的提醒区。
+ *
+ * ★ v2.3（2026-10-03，用户原话「任务看板当中，最左侧原来的周期性这一栏，
+ *   取消吧。改成周期性计划，列出之前所有人创建的周期性计划，而不是列计划
+ *   产生的任务，这里只能计划，不能修改」）：
+ *     v2.1 那一栏列的是**计划生成出来的任务**（按 task_type='周期性' 筛），
+ *     这一版改成列**计划本身**（periodic_templates），全体成员的，只读。
+ *   ★ 数据来源变了：计划不在 tasks 集合里，也不是阶段，所以这一段的计数与
+ *     内容都来自 data.plans（templateService.listAll），而不是任务列表。
+ *     连带修正了 v2.1 的一个别扭处 —— 那一栏和阶段段的计数会重复计同一批
+ *     任务（周期任务同时属于两边，三段计数之和大于「共 N 项」）；
+ *     现在各段的计数互斥，只有未开始的任务不在任何段内。
+ *   ★ listAll 对管理者（只读）也开：任务看板正是他能看的两块看板之一，
+ *     这一段对他空着是不对的。计划里没有任务里没有的东西。
+ *
+ * ★ v2.4（2026-10-03，用户原话「改成"能点进去看、只是不给改"」）：
+ *     v2.3 把这一段做成了完全点不动。用户要的是**点得进去看**。
+ *   点一行 → pages/plan-edit，那一页按 canManageTemplate 自己决定渲染
+ *   表单还是只读摘要 —— "给不给改"的判据只在那一个地方，看板不复制一份。
+ *   ★ 看板这一层不写任何修改入口：这里只跳转，写操作全在 plan-edit 里，
+ *     而它进不去的写操作会被云函数 assertCanManage 再挡一道。
  * ---------------------------------------------------------------------------
  */
 
@@ -47,71 +62,79 @@ const C = require('../../shared/constants');
 const DEFAULT_SEG = '进行中';
 
 /**
- * 周期性分段 —— **不是阶段**，按 task_type 归类。它顶替了「未开始」段。
- * ★ 判据取 task_type 而不是 recur_freq（2026-10-03 与用户确认）：
- *   「任务性质＝周期性」是业务上的归类，而 recur_freq 只是它的一个属性。
- *   代价是会出现「性质是周期性、但没填周期频率」的任务，它们排在最后。
+ * 计划分段 —— **不是阶段**，列的是计划本身（periodic_templates），不是任务。
+ * ★ 它顶替了「未开始」段，也接过 v2.1「周期性」段的位置。
+ * ★ 名字里的「计划」不能省：段上写「周期性」会被读成"周期性任务"，
+ *   而这个段列的东西根本不是任务 —— 用户点进去找不到一条任务时会以为坏了。
  */
-const PERIODIC_SEG = '周期性';
+const PLAN_SEG = '周期性计划';
 
 /**
  * 分段列表，顺序即渲染顺序。
- * ★ 不再等于 C.STAGE_COLUMNS：未开始被周期性顶替。STAGE 里将来若多出枚举值，
+ * ★ 不再等于 C.STAGE_COLUMNS：未开始被计划段顶替。STAGE 里将来若多出枚举值，
  *   会自动出现在分段里；但「未开始」是被明确去掉的，需要时得手工加回来。
  */
-const SEGMENTS = [PERIODIC_SEG].concat(C.STAGE.filter((s) => s !== '未开始'));
-
-/** 该任务是否属于某个分段。两种分段两种算法，只此一处 */
-function inSegment(task, seg) {
-  return seg === PERIODIC_SEG ? task.task_type === '周期性' : task.stage === seg;
-}
+const SEGMENTS = [PLAN_SEG].concat(C.STAGE.filter((s) => s !== '未开始'));
 
 /**
- * 周期排序名次：直接取 C.RECUR_FREQ 的数组下标（每周→每月→每季→每年→不适用）。
- * ★ 不在枚举里的值（有人在控制台直接改库就会出现，比如"每两周"）排到最后，
- *   但**不能让它从看板上消失** —— 同 viewFor 里的分类兜底，一个道理。
+ * 该**任务**是否属于某个分段。
+ * ★ 计划段恒为 false —— 那一段装的是计划，任务一条都不进。
+ *   它的计数与内容在 viewFor 里另算（来自 plans 入参）。
+ *   让它返回 false 而不是在外面到处绕开，是为了「任务属于哪一段」这个问题
+ *   只有一个出口，将来再加分段时不会漏掉某一处判断。
  */
-function recurRank(task) {
-  const i = C.RECUR_FREQ.indexOf(task.recur_freq);
-  return i === -1 ? C.RECUR_FREQ.length : i;
+function inSegment(task, seg) {
+  return seg === PLAN_SEG ? false : task.stage === seg;
 }
 
 /**
- * 算出「页面该长什么样」：分段计数、当前分段的内容、统计。
+ * 计划排序：同一主办人的排在一起，组内保持服务端给的顺序（新建的在前）。
+ *
+ * ★ 用 localeCompare 而不是 `<`：中文按拼音排，「李」「张」这样按姓氏归堆，
+ *   比按 Unicode 码位排对人友好。
+ * ★ Array.prototype.sort 自 ES2019 起保证稳定，小程序两端（iOS 的 JSC /
+ *   Android 的 V8）都符合，所以组内那层不需要再加排序键。
+ * ★ 排序纯粹是展示，不参与任何判定 —— 排错了最多是找起来费点劲，
+ *   不会有计划因此生成或不生成。
+ */
+function byOwner(a, b) {
+  return String(a.ownerName || '').localeCompare(String(b.ownerName || ''), 'zh');
+}
+
+/**
+ * 算出「页面该长什么样」：分段计数、当前分段的内容、空态文案、统计。
  *
  * ★ 纯函数：不碰 setData，也不读 this.data（全靠入参）。调用方必须把它的
  *   结果与触发它的那批状态**同一次 setData** 写下去 —— 见 Page.paint。
  * ★ 为什么不是「先 setData 状态、再在回调里重算列表」：那会留下一帧错配，
  *   见 paint 的注释（2026-10-03 实测的那个「看板错乱」）。
  */
-function viewFor(allTasks, segmentTab, filterCategory, collapsedMap) {
-  const filtered = filterCategory
-    ? allTasks.filter((t) => t.category === filterCategory)
-    : allTasks;
+function viewFor(allTasks, allPlans, segmentTab, collapsedMap) {
+  // ★ 这里原来有一层分类筛选（hitCat）：2026-10-03 用户拍板删掉了那个控件。
+  //   看板本来就是按分类分组、组标题吸顶还带条数，筛选只是多造一个
+  //   看不见的页面状态。删掉之后 allTasks / allPlans 就是渲染用的全部。
+  const plans = allPlans;
 
-  // 分段上的计数，顺序跟 SEGMENTS 走
+  const isPlanSeg = segmentTab === PLAN_SEG;
+
+  // 分段上的计数，顺序跟 SEGMENTS 走。★ 计划段的数来自计划条数，不是任务条数
   const tabs = SEGMENTS.map((seg) => ({
     seg,
-    count: filtered.filter((t) => inSegment(t, seg)).length,
+    count: seg === PLAN_SEG ? plans.length : allTasks.filter((t) => inSegment(t, seg)).length,
   }));
 
-  const inSeg = filtered.filter((t) => inSegment(t, segmentTab));
-
-  // ── 周期性段：平铺，按周期排序 ────────────────────────────────────
-  // ★ 名次相同时保持 allTasks 的原顺序：db.allTasks 已按 due_date 升序，
-  //   于是同一周期内天然是「截止近的在前」。Array.prototype.sort 自
-  //   ES2019 起保证稳定，小程序两端（iOS 的 JSC / Android 的 V8）都符合。
-  //   所以这里不需要（也不应该）再加一条排序键 —— 那属于发明业务规则。
-  const flat =
-    segmentTab === PERIODIC_SEG
-      ? inSeg.slice().sort((a, b) => recurRank(a) - recurRank(b))
-      : [];
-
-  // ── 阶段段：按分类分组 ────────────────────────────────────────────
+  let rows = [];
   let groups = [];
-  if (segmentTab !== PERIODIC_SEG) {
+
+  if (isPlanSeg) {
+    // ── 计划段：平铺全体成员的计划，同一主办人的排在一起 ──────────────
+    rows = plans.slice().sort(byOwner);
+  } else {
+    // ── 阶段段：按分类分组 ──────────────────────────────────────────
+    const inSeg = allTasks.filter((t) => inSegment(t, segmentTab));
+
     // 分组顺序跟 C.CATEGORY 的枚举顺序走（而不是按任务数量排序），
-    // 这样同一条任务每次渲染都落在同一位置，不会切个筛选就跳位置。
+    // 这样同一条任务每次渲染都落在同一位置，不会切个分段就跳位置。
     // 空分类不产生分组。
     const cats = C.CATEGORY.filter((c) => inSeg.some((t) => t.category === c));
     // ★ 兜底：万一库里有分类不在枚举内（有人直接在控制台改库就可能出现），
@@ -134,14 +157,28 @@ function viewFor(allTasks, segmentTab, filterCategory, collapsedMap) {
     });
   }
 
+  /*
+   * 空态文案在 JS 里定，不在 WXML 里写三元。
+   * ★ 计划段的空态说「这一段下没有任务」是错的 —— 它本来就没有任务，
+   *   用户会一直等任务出现。两段的空态说的不是一回事，塞进模板属性里
+   *   没法读也没法测。
+   */
+  const empty = isPlanSeg
+    ? {
+      title: '还没有人建过计划',
+      hint: '到「报任务」页把任务性质选成「周期性」，就能建一份会自动生成任务的计划',
+    }
+    : { title: '这一段下没有任务', hint: '上方可以切换分段' };
+
   return {
     tabs,
-    flat,
+    plans: rows,
     groups,
+    empty,
     stats: {
-      total: filtered.length,
-      blocked: filtered.filter((t) => t._hasBlocker).length,
-      overdue: filtered.filter((t) => t._overdue).length,
+      total: allTasks.length,
+      blocked: allTasks.filter((t) => t._hasBlocker).length,
+      overdue: allTasks.filter((t) => t._overdue).length,
     },
   };
 }
@@ -153,39 +190,43 @@ Page({
     segmentTab: DEFAULT_SEG,
     /**
      * 分段切换上的计数：[{ seg, count }]，顺序跟随 SEGMENTS。
-     * 计数受分类筛选影响 —— 切了分类，各分段的数字要跟着变。
-     * ★ 三段之和会大于顶部「共 N 项」：周期任务同时算在它所属的阶段段里，
-     *   见文件头「分段不再互斥」。
+     * 各段的数字由 viewFor 一次算好，与列表同一次 setData 写下去。
+     * ★ 计划段那一格数的是**计划**，其余数的是任务。两者互不重复，
+     *   加起来约等于顶部「共 N 项」加计划数（未开始的任务不在任何段内）。
      */
     tabs: [],
     /**
      * 当前分段内的分类分组：
      *   [{ key, category, color, collapsed, tasks: [] }]
-     * ★ 只有阶段段用它；周期性段是平铺的，走 data.flat。
+     * ★ 只有阶段段用它；计划段是平铺的，走 data.plans。
      */
     groups: [],
     /**
-     * 周期性段的平铺任务（已按周期排序）。
+     * 计划段的平铺计划（已按主办人排序，装饰过）。
      * ★ 单独一个字段而不是塞进 groups 里只放一组，是因为「不分组」和
      *   「分了一组」在 WXML 里要渲染成两种结构 —— 前者没有吸顶标题、
      *   没有计数、不能折叠。用同一个字段装两种语义，模板里就得靠
      *   条件去猜它到底是哪种。
+     * ★ 与 data.allPlans 分开：allPlans 是原始集合（切分段时从这里重建），
+     *   plans 是这一帧要渲染的那批。
      */
-    flat: [],
+    plans: [],
+    /**
+     * 空态文案，由 viewFor 按当前分段算出：
+     * 计划段的「还没有人建过计划」和阶段段的「这一段下没有任务」不是一回事。
+     */
+    empty: { title: '', hint: '' },
     /**
      * ★ 折叠状态独立于 groups 存放，key 是 `分段|分类`。
-     *   若把 collapsed 只挂在 groups 上，每次切换分段/筛选重建 groups 时
+     *   若把 collapsed 只挂在 groups 上，每次切换分段重建 groups 时
      *   用户的展开状态就会被重置 —— 切一下回来全塌了。
      *   同时也让折叠状态在分段之间各自独立保留。
      */
     collapsedMap: {},
-    /** 全部任务的原始集合（筛选时从这里过滤，不重新查库） */
+    /** 全部任务的原始集合。切分段/折叠都从它重建，不重新查库 */
     allTasks: [],
-
-    /** 分类筛选，空串表示全部 */
-    filterCategory: '',
-    categoryOptions: ['全部分类'].concat(C.CATEGORY),
-    categoryValues: [''].concat(C.CATEGORY),
+    /** 全部计划（全体成员的），同上 */
+    allPlans: [],
 
     /** 汇总统计 */
     stats: { total: 0, blocked: 0, overdue: 0 },
@@ -225,14 +266,27 @@ Page({
     try {
       if (!this.data.allTasks.length) this.setData({ loading: true });
 
-      const all = fmt.decorateTasks(await db.allTasks());
+      /*
+       * 任务与计划一起取，任何一边失败都走下面的统一报错。
+       * ★ 不做"任务拿到就算成功、计划失败留空"的部分成功：计划段空着会被
+       *   读成"没人建过计划"，而它其实只是没拉到 —— 用假前提指路，
+       *   和「列表页加载失败不能装作没有计划」是同一个道理。
+       */
+      const [rawTasks, rawPlans] = await Promise.all([
+        db.allTasks(),
+        api.templateApi.listAll().then((r) => r.list || []),
+      ]);
 
-      const patch = { allTasks: all, loading: false };
+      const all = fmt.decorateTasks(rawTasks);
+      // 「今天」由 format 自己取（dates.todayStr），与计划列表页同一条路径
+      const plans = fmt.decoratePlans(rawPlans);
+
+      const patch = { allTasks: all, allPlans: plans, loading: false };
       // ★ 只在首次落数据时挑默认分段。之后用户手动切过哪个分段就停在哪个，
       //   不能每次下拉刷新都把他弹回"进行中"。
       if (!this.segmentInitialized) {
         this.segmentInitialized = true;
-        patch.segmentTab = pickInitialSegment(all);
+        patch.segmentTab = pickInitialSegment(all, plans);
       }
       this.paint(patch);
     } catch (e) {
@@ -244,7 +298,7 @@ Page({
 
   /**
    * 一次 setData 把「状态」和「由状态算出的视图」一起写下去。
-   * 切换分段 / 筛选 / 折叠，以及拉完数据，全都走这里 —— 全页只此一处写列表。
+   * 切换分段 / 折叠，以及拉完数据，全都走这里 —— 全页只此一处写列表。
    *
    * ★ 为什么不能分两次写（先 setData 状态、再在回调里重算列表）：
    *   两次之间会留下一帧「标签已是新分段、列表还是上一段的」错配。
@@ -264,7 +318,7 @@ Page({
       Object.assign(
         {},
         patch,
-        viewFor(s.allTasks, s.segmentTab, s.filterCategory, s.collapsedMap)
+        viewFor(s.allTasks, s.allPlans, s.segmentTab, s.collapsedMap)
       ),
       cb
     );
@@ -341,7 +395,7 @@ Page({
    * 展开 / 收起当前分段里的某个分类。
    * 只翻转 collapsedMap，再由 paint 重建 groups —— 单一数据源，
    * 避免 groups 和折叠状态两处各存一份而走岔。
-   * ★ 只有阶段段有分组，周期性段走不到这里。
+   * ★ 只有阶段段有分组，计划段走不到这里。
    */
   onToggleGroup(e) {
     const category = e.currentTarget.dataset.category;
@@ -355,15 +409,26 @@ Page({
     this.paint({ collapsedMap: map });
   },
 
-  onFilterChange(e) {
-    const idx = Number(e.detail.value);
-    this.paint({ filterCategory: this.data.categoryValues[idx] });
-  },
-
   onTaskTap(e) {
     const task = e.detail.task;
     if (!task || !task._id) return;
     wx.navigateTo({ url: `/pages/task-detail/index?taskId=${task._id}` });
+  },
+
+  /**
+   * 点一行计划 → 去看那一份。
+   *
+   * ★ 跳的是 plan-edit，而那一页自己判 canEdit：
+   *   自己建的计划（或管理员）落进表单，别人的落进只读摘要。
+   *   看板不重复这套判断 —— 权限判据只有 shared/perm 一处，
+   *   在这里再写一遍就是给"两处不一致"留口子。
+   * ★ data-id 取的是 dataset（不是 task-card 的 e.detail）：计划行是普通
+   *   view，没有组件事件。
+   */
+  onPlanTap(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    wx.navigateTo({ url: `/pages/plan-edit/index?id=${id}` });
   },
 
   /** 点统计里的"卡壳"，提示卡壳任务在卡片上的标记方式 */
@@ -378,12 +443,12 @@ Page({
 
 /**
  * 挑首次进入时落在哪个分段。
- * 优先「进行中」；它空了就落到第一个有任务的分段。
+ * 优先「进行中」；它空了就落到第一个有内容的分段 —— 计划段也算有内容。
  * 不这么做的话，团队某段时间没有进行中的任务时，一进看板就是一片空白。
  */
-function pickInitialSegment(tasks) {
-  const countOf = (seg) => tasks.filter((t) => inSegment(t, seg)).length;
+function pickInitialSegment(tasks, plans) {
+  const countOf = (seg) => (seg === PLAN_SEG ? plans.length : tasks.filter((t) => inSegment(t, seg)).length);
   if (countOf(DEFAULT_SEG) > 0) return DEFAULT_SEG;
-  const firstWithTasks = SEGMENTS.find((s) => countOf(s) > 0);
-  return firstWithTasks || DEFAULT_SEG;
+  const firstWithContent = SEGMENTS.find((s) => countOf(s) > 0);
+  return firstWithContent || DEFAULT_SEG;
 }

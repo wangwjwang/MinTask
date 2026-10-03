@@ -1,16 +1,17 @@
 <!--
   pages/board Tab3 任务看板
 
-  ★ v2 结构：统计胶囊 → 分类筛选 → 分段切换 → 单一纵向列表。
+  ★ v2 结构：统计胶囊 → 分段切换 → 单一纵向列表。
     取代了原来「三列横向滚动 + 列内纵向滚动」的嵌套滚动。
 
-  ★ v2.1：分段换成 周期性 / 进行中 / 已完成，「未开始」不再成段。
+  ★ v2.3：最左那一段换成「周期性计划」，列的是**计划本身**（全体成员的，
+    只读），不再是计划生成出来的任务。
     两个分段两套渲染：
-      · 周期性段 —— 平铺，按周期（每周→每月→每季→每年）排开，不分组；
+      · 计划段   —— 平铺计划，同一主办人的排在一起，**不可点**；
       · 阶段段   —— 按任务分类分组，每组可折叠。
-    ★ 内容区那条 wx:if 链的第一条必须带上 flat.length：只判 segmentTab 的话，
-      周期性段为空时会渲染一个空视图，后面的 wx:elif / wx:else 永远轮不到，
-      「这一段下没有任务」就永远出不来。
+    ★ 内容区那条 wx:if 链的第一条必须带上 plans.length：只判 segmentTab 的话，
+      计划段为空时会渲染一个空视图，后面的 wx:elif / wx:else 永远轮不到，
+      「还没有人建过计划」就永远出不来。
     ★ 链中间不能插注释（见 update 页的告示），所以说明全写在这里。
 
   ★ v2.2：支持横向滑动切换分段（左右滑 = 切到相邻分段，到头停住不循环）。
@@ -40,20 +41,16 @@
     </view>
   </view>
 
-  <!-- ── 分类筛选 ──────────────────────────────────────────────── -->
-  <picker mode="selector" range="{{categoryOptions}}" bindchange="onFilterChange">
-    <view class="filter-pill board__filter hit">
-      <text class="filter-pill__label">{{filterCategory || '全部分类'}}</text>
-      <text class="filter-pill__arrow">▾</text>
-    </view>
-  </picker>
-
   <!--
     ── 分段切换 ──────────────────────────────────────────────────
     取自参考图 IKEA 顶部「Rooms │ Products」页签：下划线指示当前项。
     每段带计数 —— 一次只显示一段，靠计数保住"看板全貌"。
     ★ 三段计数之和会大于顶部「共 N 项」：周期任务同时算在它所属的
       阶段段里，分段不是一组互斥的阶段。见 index.js 文件头。
+    ★ 这里原来还有一行「全部分类」筛选胶囊（2026-10-03 用户拍板删除）：
+      任务本来就按分类分了组，组标题吸顶、还各带条数，"底下都能看全"，
+      筛选只是个多余的隐形状态 —— 筛着某个分类去别的页转一圈回来，
+      看板只剩几条，容易以为数据丢了。
   -->
   <view class="seg board__seg">
     <view
@@ -71,20 +68,51 @@
   <view wx:if="{{loading}}" class="loading-block">正在加载看板…</view>
 
   <block wx:else>
-    <view wx:if="{{segmentTab === '周期性' && flat.length}}">
+    <view wx:if="{{segmentTab === '周期性计划' && plans.length}}">
       <!--
-        周期性段：平铺，顺序即周期顺序（index.js 里已排好）。
-        ★ 传 recur-mode：这一段是「按周期看」，右上角该是周期（每月）而不是来源。
-          下面分组列表那一处不传 —— 它是「按阶段看」，来源仍是有用的信息。
+        计划段：平铺全体成员的计划，顺序在 index.js 里排好（同一主办人的连着）。
+        ★ 点一行进 plan-edit 看那一份（2026-10-03 用户要求「能点进去看、
+          只是不给改」）。给不给改由那一页自己判 canEdit：自己的计划落进
+          表单，别人的落进只读摘要 —— 看板不复制这份判断。
+        ★ 仍然不是 task-card：列的是计划，不是任务；用任务卡片的样式
+          会让人以为点进去是任务详情。
+        ★ 目标是 plan-edit 而不是新建一个详情页：计划只有这一个出口，
+          "看"和"改"共用一页、由同一个 canEdit 分流，才不会出现
+          详情页说"只读"、隔壁页却给改的错位。
       -->
-      <task-card
-        wx:for="{{flat}}"
-        wx:for-item="task"
+      <view
+        wx:for="{{plans}}"
+        wx:for-item="plan"
         wx:key="_id"
-        task="{{task}}"
-        recur-mode="{{true}}"
-        bind:tap="onTaskTap"
-      />
+        class="card card--flat board__plan hit"
+        data-id="{{plan._id}}"
+        bindtap="onPlanTap"
+      >
+        <view class="board__plan-head">
+          <text class="board__plan-name ellipsis">{{plan.name}}</text>
+          <text class="badge {{plan._stateTone}}">{{plan._stateText}}</text>
+        </view>
+
+        <view class="board__plan-line">
+          <text class="board__plan-k">主办</text>
+          <text class="board__plan-v">{{plan.ownerName || '—'}}</text>
+        </view>
+
+        <view class="board__plan-line">
+          <text class="board__plan-k">排期</text>
+          <text class="board__plan-v">{{plan._schedule || '—'}}</text>
+        </view>
+
+        <view class="board__plan-line">
+          <text class="board__plan-k">本期</text>
+          <text class="board__plan-v t-mono">{{plan._periodText || '—'}}</text>
+        </view>
+
+        <view class="board__plan-line">
+          <text class="board__plan-k">任务名</text>
+          <text class="board__plan-v">{{plan._taskName || '—'}}</text>
+        </view>
+      </view>
     </view>
 
     <block wx:elif="{{groups.length}}">
@@ -121,10 +149,11 @@
       </view>
     </block>
 
-    <empty-state
-      wx:else
-      title="这一段下没有任务"
-      hint="上方可以切换分段，或换一个分类看看"
-    />
+    <!--
+      空态文案由 viewFor 按当前分段与筛选算好（data.empty）——
+      计划段该说「还没有人建过计划」，阶段段才是「这一段下没有任务」，
+      两段共用一句话等于让前者一直等一个不会出现的任务。
+    -->
+    <empty-state wx:else title="{{empty.title}}" hint="{{empty.hint}}" />
   </block>
 </view>

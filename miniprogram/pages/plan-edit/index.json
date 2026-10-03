@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "修改计划",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "field-picker": "/components/field-picker/index",
+    "plan-schedule": "/components/plan-schedule/index"
+  }
+}

@@ -4,12 +4,6 @@
   padding: 4rpx 0 var(--gap);
 }
 
-/* 分类筛选胶囊的外观定义在 app.wxss 的 .filter-pill（与改任务页共用），
-   这里只补本页需要的外边距 */
-.board__filter {
-  margin-bottom: var(--gap-sm);
-}
-
 .board__seg {
   margin-bottom: var(--gap-sm);
 }
@@ -78,4 +72,55 @@
   width: 24rpx;
   font-size: var(--fs-micro);
   color: var(--muted);
+}
+
+/* ── 计划段的行 ────────────────────────────────────────────────── */
+
+/*
+ * 计划行是**只读**的：没有按压反馈、没有箭头、没有下划线。
+ * 它长得像卡片但没有可点的意思 —— 用 .card--flat 保留卡片的排版，
+ * 靠"什么都没绑"来传达只读，而不是靠灰掉（灰掉会被读成"暂时不可用"）。
+ */
+.board__plan {
+  margin-bottom: var(--gap-sm);
+}
+
+.board__plan-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.board__plan-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+}
+
+/*
+ * 「主办 / 排期 / 本期 / 任务名」四行同构。
+ * 标签固定宽度而不是靠 gap 顶开：四行的值要左边对齐成一列，
+ * 否则「任务名」那行最长会把前面的标签挤窄，看起来像两种行。
+ */
+.board__plan-line {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  margin-top: 8rpx;
+}
+
+.board__plan-k {
+  flex-shrink: 0;
+  width: 84rpx;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.board__plan-v {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sub);
+  color: var(--text-sub);
 }

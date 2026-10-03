@@ -1,0 +1,94 @@
+/* pages/plan-edit */
+
+/*
+ * .field--picker / .picker__label 在 app.wxss；
+ * 成员行（.pick-row 系列）与勾选标记（.pick__check）也在 app.wxss。
+ * 本页不重复定义。
+ */
+
+.edit__tip {
+  margin-top: 20rpx;
+  padding: 16rpx 20rpx;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  line-height: 1.6;
+}
+
+/* ── 只读视图：看的人不打算改它，就别摆表格 ── */
+
+.edit__ro-head {
+  align-items: flex-start;
+  margin-bottom: 8rpx;
+}
+
+/*
+ * 标签列定宽，值从左边缘对齐 —— 与任务看板计划行（.board__plan-line）
+ * 同一套排法：两处显示的是同一批字段，换页看时不该重新找位置。
+ */
+.edit__ro-line {
+  display: flex;
+  align-items: baseline;
+  margin-top: 16rpx;
+}
+
+.edit__ro-k {
+  width: 84rpx;
+  flex: none;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.edit__ro-v {
+  flex: 1;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.edit__ro-detail {
+  margin-top: 24rpx;
+  padding-top: 16rpx;
+  border-top: 2rpx solid var(--divider);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.edit__members {
+  margin-top: 8rpx;
+  border-top: 2rpx solid var(--divider);
+  padding-top: 8rpx;
+  max-height: 640rpx;
+  overflow-y: auto;
+}
+
+.edit__members-empty {
+  padding: 24rpx 0;
+}
+
+/* ── 危险区：停用 / 删除 ── */
+
+.edit__danger-zone {
+  margin-bottom: var(--gap);
+}
+
+.edit__danger-tip {
+  line-height: 1.6;
+}
+
+/*
+ * 停用是可逆动作，用普通描边按钮；
+ * 删除不可逆，用红字 —— 但不填充实心：
+ * 底栏已经有一个实心主色的「保存修改」，再来一个实心红，
+ * 两个实心按钮会互相抢视觉重心，而删除恰恰是最不该被误点的那一个。
+ */
+.edit__state {
+  width: 100%;
+  margin-top: 20rpx;
+}
+
+.edit__danger {
+  width: 100%;
+  margin-top: 16rpx;
+  color: var(--tone-danger);
+  border-color: var(--tone-danger);
+}

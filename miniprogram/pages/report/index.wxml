@@ -1,5 +1,5 @@
 <!-- pages/report Tab1 报任务 -->
-<view class="page page--with-footer page--tabbar">
+<view class="page page--tabbar">
 
   <view wx:if="{{loading}}" class="loading-block">正在加载任务…</view>
 
@@ -18,6 +18,34 @@
         <text>主办 {{stats.led}}</text>
         <text>协办 {{stats.joined}}</text>
         <text>已完成 {{stats.done}}</text>
+      </view>
+    </view>
+
+    <!--
+      ── 自动生成待跟进 ───────────────────────────────────────────
+      系统按计划生成的任务，落到主办人头上却没人吭声 —— 它们和手工任务
+      混在同一个列表里，很容易看成"本来就在那儿的"。
+      这里把「生成了、还没人碰过」的拎到最上面：看到就是该动了。
+      ★ 位置在久无进展**之上**：这一区是"新冒出来的事"（还可能没过期），
+        那一区是"拖着的事"，先看新的。
+      ★ 一条都没有时整块不渲染（wx:if），不留空位。
+      ★ 判据在 page.js 的 pickFresh 里（含"碰过没有"为什么看
+        latestProgressAt），这里只负责铺。
+    -->
+    <view wx:if="{{fresh.length}}" class="card report__fresh">
+      <view class="row row--between report__fresh-head">
+        <text class="report__fresh-title">自动生成 {{fresh.length}} 项待跟进</text>
+      </view>
+
+      <view
+        wx:for="{{fresh}}"
+        wx:key="_id"
+        class="report__fresh-row hit"
+        data-task="{{item}}"
+        bindtap="onFreshTap"
+      >
+        <text class="report__fresh-name ellipsis">{{item.task_name}}</text>
+        <text class="report__fresh-due t-mono">{{item.due_date}} 截止</text>
       </view>
     </view>
 
@@ -157,7 +185,33 @@
       </block>
     </view>
 
-    <!-- ── 区块 4：新加入协办入口 ─────────────────────────────────── -->
+    <!--
+      ── 区块 4：新建任务入口 ─────────────────────────────────────
+      ★ 这里原来是一条**固定在底部的按钮栏**（.footer-bar--tabbar）。
+        2026-10-03 用户拍板去掉，原话「新建任务那个按钮所在那个白栏特别大，
+        要不这个新建任务就不单独做按钮了。也和那个新加入协办一样，
+        做成那种的最下方的，和它做成类似的一项」。
+
+        为什么显得特别大：本页是 Tab 页，那条按钮栏必须抬到自定义 tabBar
+        之上（否则被盖掉一截），于是**两条白栏上下叠着** ——
+        按钮栏 + tabBar，中间没有内容，看起来就是一整块。
+
+      ★ 顺序：新建任务在前。它是本页的主动作（这页就叫「报任务」），
+        新加入协办是次要的。两张卡同形，一起构成页面底部的入口区。
+      ★ 两处 empty-state 的指路文案（"点击下方「新建任务」/「新加入协办」"）
+        说的都是"下方"，仍然成立。
+    -->
+    <view class="card card--flat entry-card hit" bindtap="onCreateTap">
+      <view class="row row--between">
+        <view class="flex-1">
+          <view class="t-title">新建任务</view>
+          <view class="t-muted">手工任务、周期性计划都从这里建</view>
+        </view>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+
+    <!-- ── 区块 5：新加入协办入口 ─────────────────────────────────── -->
     <view class="card card--flat entry-card hit" bindtap="onJoinTap">
       <view class="row row--between">
         <view class="flex-1">
@@ -168,13 +222,4 @@
       </view>
     </view>
   </block>
-</view>
-
-<!--
-  ── 区块 5：新建任务（页面最底部固定按钮）──────────────────────
-  footer-bar--tabbar：本页是 Tab 页，按钮栏要抬到自定义 tabBar 之上，
-  否则会被 tabBar 盖掉一截。
--->
-<view class="footer-bar footer-bar--tabbar">
-  <button class="btn btn--primary" bindtap="onCreateTap">＋ 新建任务</button>
 </view>

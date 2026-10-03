@@ -15,28 +15,22 @@
     </view>
   </view>
 
-  <picker mode="selector" range="{{stageOptions}}" bindchange="onFilterChange">
-    <view class="filter-pill update__filter hit">
-      <text class="filter-pill__label">{{filterStage || '全部'}}</text>
-      <text class="filter-pill__arrow">▾</text>
-    </view>
-  </picker>
-
   <view wx:if="{{loading && !tasks.length}}" class="loading-block">正在加载…</view>
 
   <block wx:else>
     <!--
       ── 在办任务 ──────────────────────────────────────────────────
-      ★ 下面三个分支是一个 wx:if / wx:elif / wx:elif 链，中间**不能插注释**。
+      ★ 下面两条是一个 wx:if / wx:elif 链，中间**不能插注释**。
 
-      ★ 第二个空状态的条件别简化成 shownOpen.length === 0：
-        选「全部」而任务又全做完时，上方列表是空的、但下方有已完成组，
-        那时弹"还没有你主办的任务"或"该阶段下没有任务"都是误导。
-        只有底部也没东西可看时，才轮到空状态出场。
+      ★ 空态只在"一条任务都没有"时出场。别改成 openTasks.length === 0：
+        任务全做完时上方列表是空的、但下方还有已完成组可看，
+        那时弹"还没有你主办的任务"是误导。
+      ★ 这里原来还有一层阶段筛选（2026-10-03 用户拍板删除），
+        连同"该阶段下没有任务"那条空态一起没了。
     -->
-    <block wx:if="{{shownOpen.length}}">
+    <block wx:if="{{openTasks.length}}">
       <task-card
-        wx:for="{{shownOpen}}"
+        wx:for="{{openTasks}}"
         wx:key="_id"
         task="{{item}}"
         bind:tap="onTaskTap"
@@ -47,14 +41,9 @@
       title="还没有你主办的任务"
       hint="请到「报任务」页新建任务"
     />
-    <empty-state
-      wx:elif="{{!showDoneGroup || !doneTasks.length}}"
-      title="该阶段下没有任务"
-      hint="换个筛选条件看看"
-    />
 
     <!-- ── 已完成（默认收起，放最下）─────────────────────────────── -->
-    <block wx:if="{{showDoneGroup && doneTasks.length}}">
+    <block wx:if="{{doneTasks.length}}">
       <view class="divider"></view>
 
       <view class="section-title hit" bindtap="onToggleDone">
@@ -72,6 +61,17 @@
         />
       </block>
     </block>
+
+    <!-- ── 管理我的计划入口 ───────────────────────────────────────── -->
+    <view class="card card--flat entry-card hit" bindtap="onPlansTap">
+      <view class="row row--between">
+        <view class="flex-1">
+          <view class="t-title">管理我的计划</view>
+          <view class="t-muted">周期性计划：看排期、改设置或删除</view>
+        </view>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
 
     <!-- ── 退出协办入口 ───────────────────────────────────────────── -->
     <view class="card card--flat entry-card hit" bindtap="onLeaveTap">

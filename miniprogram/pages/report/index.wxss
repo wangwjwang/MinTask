@@ -10,7 +10,8 @@
  *      不加的话吸顶条两侧各留一条 24rpx 的缝，滚动的内容会从缝里漏出来；
  *   3. 与下方卡片的间距靠 .section-title 自带的 padding-bottom(16rpx) 撑。
  *      如果改用 margin，那段不在背景覆盖范围内，吸顶时就会露出滚过的卡片；
- *   4. z-index 要低于 .footer-bar(10)，否则吸顶条会盖住底部按钮栏。
+ *   4. z-index 只给 2 —— 底部那条自定义 tabBar 是 100，必须压在吸顶条上面
+ *      （滚到底时吸顶条正好紧贴 tabBar）。给大了它会盖住 tabBar。
  *
  * 吸附范围由父容器决定：每组都被 .report__group 包住，
  * 所以滚过本组后标题会被下一组的标题顶走，而不是一直跟到页面底部。
@@ -47,6 +48,46 @@
  *     那边在卡片右下的日期上，不会混。）
  * ★ 标题左上的小圆点是唯一的装饰：一列白卡里给这块一个第一眼标记。
  */
+/*
+ * ── 自动生成待跟进 ──
+ * 与下面的久无进展区同构（同一套行/分隔线），刻意不给它配彩色圆点：
+ * 黄色圆点在那里表示"该管管了"，这一区是"系统替你排好的新任务"，
+ * 不该借同一个告警信号。区分靠标题文案，不靠颜色。
+ */
+.report__fresh {
+  padding-bottom: 8rpx;
+}
+
+.report__fresh-head {
+  padding-bottom: 12rpx;
+}
+
+.report__fresh-title {
+  font-size: var(--fs-sub);
+  color: var(--text);
+}
+
+.report__fresh-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-top: 2rpx solid var(--divider);
+}
+
+.report__fresh-name {
+  flex: 1;
+  /* flex 子项默认 min-width:auto，不加这条 ellipsis 在长标题上不生效 */
+  min-width: 0;
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+
+.report__fresh-due {
+  margin-left: var(--gap-sm);
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
 .report__stale {
   /* .card 的 padding 是四边等值，行尾再多 8rpx 会显得下重上轻，收一点 */
   padding-bottom: 8rpx;

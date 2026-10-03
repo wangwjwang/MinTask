@@ -1,0 +1,31 @@
+/* components/plan-schedule */
+
+.sched__preview {
+  margin-top: 20rpx;
+  border-top: 2rpx solid var(--divider);
+  padding-top: 20rpx;
+}
+
+.sched__row {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  margin-bottom: 10rpx;
+}
+
+.sched__row:last-child {
+  margin-bottom: 0;
+}
+
+.sched__k {
+  flex: none;
+  width: 88rpx;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+.sched__v {
+  flex: 1;
+  font-size: var(--fs-sub);
+  color: var(--text);
+}

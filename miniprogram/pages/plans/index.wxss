@@ -1,0 +1,50 @@
+/* pages/plans 管理我的计划 */
+
+.plans__intro {
+  margin-bottom: var(--gap);
+}
+
+.plans__item {
+  /* 整张卡可点，和 .entry-card 一样给一点反馈空间 */
+  position: relative;
+}
+
+.plans__head {
+  align-items: flex-start;
+  margin-bottom: 16rpx;
+}
+
+.plans__name {
+  flex: 1;
+  /* 名字可能很长，别把右边的状态徽标挤走 */
+  margin-right: 16rpx;
+}
+
+/*
+ * 三行「标签 + 值」：标签定宽、值占满。
+ * 与 components/plan-schedule 的预览区同一套视觉层级 ——
+ * 这里展示的也是"系统将要做的事"，不是待填字段。
+ */
+.plans__line {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+
+.plans__line:last-child {
+  margin-bottom: 0;
+}
+
+.plans__k {
+  flex: none;
+  width: 88rpx;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+.plans__v {
+  flex: 1;
+  font-size: var(--fs-sub);
+  color: var(--text-sub);
+}

@@ -75,10 +75,12 @@ function progressRecordId(token) {
   return `pr-${token}`;
 }
 
-/** 周期生成日志的 _id */
-function jobLogId(periodKey, ts) {
-  return `gen-${periodKey}-${ts || Date.now()}`;
-}
+// ★ 曾经的 jobLogId(runDate, ts) 已删除：审计日志**不需要**确定性 _id。
+//   它靠 ms 时间戳生成，两次运行落在同一毫秒就会主键冲突，
+//   而写日志的失败是被 try/catch 吞掉的（只打一行日志），
+//   结果就是一条审计记录**静默消失** —— 比没有 id 糟糕得多。
+//   本文件其余几个 *Id 之所以存在，是因为它们承担幂等：重复触发必须命中同一条。
+//   日志恰恰相反：每次运行都该留下一条独立记录。交给数据库自动生成即可。
 
 module.exports = {
   clientToken,
@@ -87,5 +89,4 @@ module.exports = {
   periodicTaskId,
   manualTaskId,
   progressRecordId,
-  jobLogId,
 };

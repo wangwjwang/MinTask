@@ -7,8 +7,18 @@
  *   只剩"切页前的兜底"作用，不再真正渲染）。两处若要一起改，
  *   记得 app.json 的 color/selectedColor 也同步。
  *
- * ★ 颜色一律用全局令牌（app.wxss 的 page 选择器上定义）。
- *   自定义属性会继承进组件，所以这里能直接 var()。
+ * ★ 颜色**必须带兜底值**：var(--令牌, 字面色值)。
+ *
+ *   这里原来说"自定义属性会继承进组件，所以能直接 var()" —— **那是错的**，
+ *   2026-10-03 用户报的就是这个 bug：tabBar 整条背景透明，能看见滚到背后的
+ *   任务卡片，看着像悬浮的、容易误点。而同一屏里页面级的 .footer-bar
+ *   （新建任务条）是正常白底 —— 差别在于**自定义 tabBar 不挂在 page 的
+ *   节点树下**，app.wxss 里 `page { --card: ... }` 这层继承到不了它，
+ *   var() 取不到值就**静默失效**：background 变透明、border-top 变无，
+ *   不报错、不警告。普通页面组件（task-card 等）在 page 下，所以照常继承。
+ *
+ *   兜底值让"取不到令牌"退化成"颜色写死"，绝不会再退化成透明。
+ *   下面每个字面色值都和 app.wxss 的令牌一致，改主题时**两边一起改**。
  */
 .tabbar {
   position: fixed;
@@ -19,8 +29,8 @@
   display: flex;
   height: 100rpx;
   padding-bottom: env(safe-area-inset-bottom);
-  background: var(--card);
-  border-top: 2rpx solid var(--border);
+  background: var(--card, #FFFFFF);
+  border-top: 2rpx solid var(--border, #E9E7E4);
 }
 
 .tabbar__item {
@@ -40,11 +50,11 @@
   margin-top: 4rpx;
   font-size: 20rpx;
   line-height: 1.2;
-  color: var(--muted);
+  color: var(--muted, #8A8F99);
 }
 
 .tabbar__item--on .tabbar__text {
-  color: var(--primary);
+  color: var(--primary, #2563EB);
 }
 
 /* 只读角色点不动的页签。整项一起淡，不是只淡文字 */

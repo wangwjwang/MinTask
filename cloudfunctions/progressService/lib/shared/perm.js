@@ -116,6 +116,31 @@ function canDeleteTask(task, openid, isAdmin) {
   return isLeader(task, openid) || !!isAdmin;
 }
 
+/**
+ * 是否可管理（修改 / 停用 / 删除）某个周期计划。
+ * 规则：计划的主办人，或管理员。
+ *
+ * ★ 为什么是 ownerId 而不是"创建人"
+ *   计划是「谁主办谁负责」的东西 —— 生成出来的任务也落在主办人头上。
+ *   管理员替别人建一个计划（指派他人主办）之后，该由那个人自己维护，
+ *   而不是永远只有管理员能改。
+ *
+ * ★ 为什么管理员这一条必须保留
+ *   成员离职或换岗后，他名下那些计划会变成**没人能改的僵尸**，
+ *   而它每个月还在自动往库里生成任务。跟 canDeleteTask 里
+ *   "59 条无主办的历史任务"是同一类问题。
+ *
+ * ★ 管理者（只读角色）能不能管，不在本函数判定
+ *   本文件是纯函数、不依赖运行环境，拿不到 role。角色闸门由云函数入口的
+ *   ctx.requireWriter() 统一负责 —— 管理者在建/改计划的第一步就被挡下。
+ *
+ * @param {boolean} isAdmin 当前用户是否管理员
+ */
+function canManageTemplate(template, openid, isAdmin) {
+  if (!openid || !template) return false;
+  return template.ownerId === openid || !!isAdmin;
+}
+
 module.exports = {
   isLeader,
   isParticipant,
@@ -127,4 +152,5 @@ module.exports = {
   canResolveBlocker,
   canRemoveCollaborator,
   canDeleteTask,
+  canManageTemplate,
 };

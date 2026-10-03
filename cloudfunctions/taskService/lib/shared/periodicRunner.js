@@ -28,9 +28,8 @@
  */
 
 const { COLLECTIONS, ORIGIN, QUERY_BATCH } = require('./constants');
-const { periodKeyOf } = require('./dates');
-const { isDuplicateError, periodicTaskId, jobLogId } = require('./idempotency');
-const { buildPlan } = require('./periodic');
+const { isDuplicateError, periodicTaskId } = require('./idempotency');
+const { buildPlan, normalizeToday, normalizePeriodType, describeOffsets, RECUR_FREQ_OF } = require('./periodic');
 const { buildTaskDoc } = require('./taskRepo');
 
 const TASKS = COLLECTIONS.TASKS;
@@ -40,15 +39,27 @@ const JOB_LOGS = COLLECTIONS.JOB_LOGS;
 /**
  * 执行一次周期任务生成。
  *
+ * ★ 没有「本次的 periodKey」这个参数了。
+ *   改造前周期只在月粒度上生成，一个批次共用一个 key；
+ *   现在每期由模板自己的开始日决定，月/季/年三种模板在同一轮巡检里
+ *   可能分别落在 2026-10 / 2026-07 / 2026-01 三个不同的期上。
+ *   所以 periodKey 是**每个模板各自算出来的**（见 periodic.evaluate），
+ *   汇总里只保留「以哪天为准」的 today。
+ *
  * @param {object} db
  * @param {object} [opts]
- * @param {string} [opts.periodKey]  指定周期（如 '2026-11'），缺省取当前月。手动补跑用。
- * @param {boolean} [opts.dryRun]    只计算不写库，用于管理员预览
- * @param {string} [opts.operator]   触发者标识（openid 或 'timer'），写入日志便于追溯
+ * @param {Date|string} [opts.today]  假装今天是哪天（'YYYY-MM-DD'），缺省取真实今天。
+ *                                    ★ 用途是补跑历史周期：传 '2026-09-05' 就等于
+ *                                    「如果 9 月 5 日那天跑过，会生成什么」——
+ *                                    过期判定、开始日判定都按那天算，语义自洽。
+ * @param {boolean} [opts.dryRun]     只计算不写库，用于管理员预览
+ * @param {string}  [opts.templateId] 只跑这一个模板（建完计划立即生成当期任务用）。
+ *                                    缺省跑全部启用模板。
+ * @param {string} [opts.operator]    触发者标识（openid 或 'timer'），写入日志便于追溯
  * @returns {Promise<object>} 执行结果与明细
  */
 async function runGenerate(db, opts = {}) {
-  const periodKey = opts.periodKey || periodKeyOf(new Date());
+  const today = normalizeToday(opts.today);
   const dryRun = !!opts.dryRun;
   const startedAt = Date.now();
 
@@ -56,33 +67,28 @@ async function runGenerate(db, opts = {}) {
   const skipped = [];
   const failed = [];
 
-  // ── 1. 取所有启用的模板（云函数端单次上限 100，足够团队规模）──────────
-  const tplRes = await db
-    .collection(TEMPLATES)
-    .where({ enabled: true })
-    .limit(QUERY_BATCH)
-    .get();
+  // ── 1. 取要跑的模板（云函数端单次上限 100，足够团队规模）────────────
+  //     ★ 指定 templateId 时不再加 enabled 条件：建完计划当场生成时，
+  //       我们想跑的就是"刚建的那一条"，由 evaluate 统一判定 enabled，
+  //       免得"建完立刻停用"这种组合在这里和 periodic.js 里给出两种答案。
+  const filter = opts.templateId ? { _id: opts.templateId } : { enabled: true };
+  const tplRes = await db.collection(TEMPLATES).where(filter).limit(QUERY_BATCH).get();
   const templates = tplRes.data || [];
 
-  // ── 2. 纯计算阶段：决定本月哪些模板该生成、任务名与截止日各是什么 ──────
-  //      buildPlan 内部按 periodType 过滤（季/年周期不会每月都生成）
-  const plan = buildPlan(templates, periodKey);
-
-  // 未进入 plan 的启用模板，记录为"本周期无需生成"，便于排查模板配置
-  const plannedIds = new Set(plan.map((p) => p.template._id));
-  for (const t of templates) {
-    if (!plannedIds.has(t._id)) {
-      skipped.push({ templateId: t._id, name: t.name, reason: 'not_due_this_period' });
-    }
-  }
+  // ── 2. 纯计算阶段：决定今天哪些模板该生成、任务名与起止日各是什么 ─────
+  //     buildPlan 内部判定「开始日到了没 / 本期过期没」
+  const { plan, skipped: notDue } = buildPlan(templates, today);
+  for (const s of notDue) skipped.push(s);
 
   if (dryRun) {
     return {
-      periodKey,
+      today,
       dryRun: true,
       wouldCreate: plan.map((p) => ({
         templateId: p.template._id,
         taskName: p.taskName,
+        periodKey: p.periodKey,
+        startDate: p.startDate,
         dueDate: p.dueDate,
         docId: p.docId,
       })),
@@ -95,6 +101,7 @@ async function runGenerate(db, opts = {}) {
   // ── 3. 逐条落库 ─────────────────────────────────────────────────────
   for (const item of plan) {
     const t = item.template;
+    const periodKey = item.periodKey;
     const docId = periodicTaskId(t._id, periodKey);
 
     // 3a. 廉价查重：让"已存在"走正常分支，而不是靠捕获异常。
@@ -117,8 +124,10 @@ async function runGenerate(db, opts = {}) {
         category: t.category || '其他',
         source: t.source || '自发创新',
         task_type: t.taskType || '周期性',
-        recur_freq: t.recurFreq || '每月',
-        recur_rule: t.recurRule || t.deadlineRule || '',
+        // ★ recur_freq 由 periodType 派生，不读模板上的 recurFreq 字段 ——
+        //   两个字段表达同一件事时，迟早会配出"每月 vs 每年"这种自相矛盾的任务。
+        recur_freq: RECUR_FREQ_OF[normalizePeriodType(t.periodType)] || '',
+        recur_rule: describeOffsets(t),
         priority: t.priority || 'P2',
         progress: 0,
         start_date: item.startDate,
@@ -141,7 +150,15 @@ async function runGenerate(db, opts = {}) {
 
     try {
       await db.collection(TASKS).add({ data: doc });
-      created.push({ templateId: t._id, name: t.name, taskId: docId, taskName: item.taskName });
+      created.push({
+        templateId: t._id,
+        name: t.name,
+        taskId: docId,
+        taskName: item.taskName,
+        periodKey,
+        startDate: item.startDate,
+        dueDate: item.dueDate,
+      });
     } catch (e) {
       if (isDuplicateError(e)) {
         // 并发窗口：两个实例同时通过了 3a 的查重，其中一个在这里被主键拦下。
@@ -156,7 +173,7 @@ async function runGenerate(db, opts = {}) {
 
   // ── 4. 写审计日志 ───────────────────────────────────────────────────
   const summary = {
-    periodKey,
+    today,
     templateCount: templates.length,
     created,
     skipped,
@@ -167,8 +184,10 @@ async function runGenerate(db, opts = {}) {
   };
 
   try {
+    // 不指定 _id：审计日志每次运行都要留一条，用不着确定性主键，
+    // 交给数据库生成反而不会因为同毫秒撞主键而丢记录。
     await db.collection(JOB_LOGS).add({
-      data: { ...summary, _id: jobLogId(periodKey, Date.now()), type: 'generatePeriodicTasks' },
+      data: { ...summary, type: 'generatePeriodicTasks' },
     });
   } catch (e) {
     // 日志写入失败不应影响生成结果（任务已经正确落库了）

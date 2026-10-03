@@ -1,0 +1,204 @@
+<!--
+  pages/plan-edit 看一份计划（是自己的或管理员才给改）
+
+  ★ 一页两态：canEdit 为真走表单，为假走只读摘要。
+    判据只有 perm.canManageTemplate 一处（云函数用同一个函数），
+    WXML 这边只是把结果渲染成两种样子。
+  ★ 只读分支里没有任何输入控件、按钮、bindtap —— 不是把表单灰掉，
+    是根本不摆可改的东西。field-picker / plan-schedule 都没有 disabled
+    属性，摆出来就是个"看着能点、点了也变"的假象。
+  ★ 两个 <block> 之间不能夹注释：wx:else 必须紧跟着它的 wx:if。
+-->
+<view class="page page--with-footer">
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载…</view>
+
+  <block wx:else>
+    <block wx:if="{{canEdit}}">
+      <!-- ── 基本信息 ──────────────────────────────────────────────── -->
+      <view class="card">
+        <view class="field">
+          <view class="field__label field__label--required">计划名称</view>
+          <input
+            class="field__input"
+            placeholder="例如：写报告 —— 系统会在名字前面加上期间"
+            placeholder-class="field__placeholder"
+            value="{{form.name}}"
+            data-field="name"
+            maxlength="60"
+            bindinput="onInput"
+          />
+        </view>
+
+        <view class="field">
+          <view class="field__label">计划说明</view>
+          <textarea
+            class="field__textarea"
+            placeholder="最终要实现什么目的、验收标准是什么…"
+            placeholder-class="field__placeholder"
+            value="{{form.detail}}"
+            data-field="detail"
+            maxlength="2000"
+            auto-height
+            bindinput="onInput"
+          />
+        </view>
+
+        <field-picker
+          label="任务分类"
+          field="category"
+          value="{{form.category}}"
+          options="{{categoryOptions}}"
+          required
+          bind:change="onEnumChange"
+        />
+
+        <field-picker
+          label="任务来源"
+          field="source"
+          value="{{form.source}}"
+          options="{{sourceOptions}}"
+          required
+          bind:change="onEnumChange"
+        />
+      </view>
+
+      <!-- ── 排期 ──────────────────────────────────────────────────── -->
+      <view class="card">
+        <plan-schedule
+          name="{{form.name}}"
+          period-type-idx="{{periodTypeIdx}}"
+          start-month-idx="{{startMonthIdx}}"
+          start-day="{{startDay}}"
+          end-month-idx="{{endMonthIdx}}"
+          end-day="{{endDay}}"
+          bind:change="onPlanScheduleChange"
+        />
+
+        <view class="t-muted edit__tip">
+          改排期只影响以后的生成 —— 已经生成的任务不会被改写，也不会被删。
+        </view>
+      </view>
+
+      <!-- ── 人员 ──────────────────────────────────────────────────── -->
+      <view class="card">
+        <view class="field--picker">
+          <view class="field__label picker__label">主办人</view>
+          <view class="row">
+            <text class="field__value">{{ownerName || '—'}}</text>
+          </view>
+        </view>
+
+        <view class="field--picker" bindtap="onToggleMemberPanel">
+          <view class="field__label picker__label">协办人（可多选）</view>
+          <view class="row">
+            <text class="field__value {{collaboratorIds.length ? '' : 'field__value--empty'}}">
+              {{collaboratorIds.length ? collaboratorIds.length + ' 人已选' : '未选择'}}
+            </text>
+            <text class="field__arrow">{{memberPanelOpen ? '⌄' : '›'}}</text>
+          </view>
+        </view>
+
+        <view wx:if="{{memberPanelOpen}}" class="edit__members">
+          <view wx:if="{{!allMembers.length}}" class="t-muted edit__members-empty">
+            暂无可选成员（其他成员需先认领身份）
+          </view>
+          <view
+            wx:for="{{allMembers}}"
+            wx:key="_id"
+            class="pick-row hit {{collaboratorIds.indexOf(item.openid) !== -1 ? 'pick-row--on' : ''}}"
+            data-openid="{{item.openid}}"
+            bindtap="onToggleMember"
+          >
+            <view class="flex-1">
+              <text class="pick-row__name">{{item.name}}</text>
+              <text wx:if="{{item.dept}}" class="t-muted pick-row__dept">{{item.dept}}</text>
+            </view>
+            <view wx:if="{{collaboratorIds.indexOf(item.openid) !== -1}}" class="pick__check">✓</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- ── 危险区：停用与删除 ────────────────────────────────────── -->
+      <view class="card card--flat edit__danger-zone">
+        <view class="t-muted edit__danger-tip">
+          停用后系统不再为这份计划生成新任务，已生成的任务不受影响，随时可以再启用。
+          删除则连计划本身一并去掉，同样不影响已生成的任务。
+        </view>
+
+        <button class="btn btn--plain btn--sm edit__state" bindtap="onToggle">
+          {{enabled ? '停用计划' : '启用计划'}}
+        </button>
+
+        <button class="btn btn--plain btn--sm edit__danger" bindtap="onDelete">删除计划</button>
+      </view>
+    </block>
+    <block wx:else>
+      <!--
+        只读：给的是"这份计划是什么"，不是一张改不动的表。
+        显示的三个派生字段（排期 / 本期 / 任务名）与计划列表页、任务看板
+        是同一个 utils/format.decoratePlan 算出来的。
+        没有「任务名」这类字段的话，看的人只知道有个计划，
+        不知道它下一期会生成出叫什么的活。
+      -->
+      <view class="card">
+        <view class="row row--between edit__ro-head">
+          <text class="t-title ellipsis">{{plan.name}}</text>
+          <text class="badge {{plan._stateTone}}">{{plan._stateText}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">主办</text>
+          <text class="edit__ro-v">{{plan.ownerName || '—'}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">协办</text>
+          <text class="edit__ro-v">{{collaboratorText}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">分类</text>
+          <text class="edit__ro-v">{{plan.category || '—'}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">来源</text>
+          <text class="edit__ro-v">{{plan.source || '—'}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">排期</text>
+          <text class="edit__ro-v">{{plan._schedule || '—'}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">本期</text>
+          <text class="edit__ro-v t-mono">{{plan._periodText || '—'}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">任务名</text>
+          <text class="edit__ro-v">{{plan._taskName || '—'}}</text>
+        </view>
+
+        <view wx:if="{{plan.detail}}" class="t-muted edit__ro-detail">{{plan.detail}}</view>
+      </view>
+
+      <view class="card card--flat edit__tip">
+        <view class="t-sub">
+          这份计划的主办人不是你，只能查看。要改它，找主办人，或让管理员处理。
+        </view>
+      </view>
+    </block>
+  </block>
+</view>
+
+<view wx:if="{{canEdit}}" class="footer-bar">
+  <button
+    class="btn btn--primary"
+    loading="{{submitting}}"
+    disabled="{{submitting}}"
+    bindtap="onSave"
+  >保存修改</button>
+</view>

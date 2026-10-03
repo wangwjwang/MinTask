@@ -1,0 +1,56 @@
+<!-- pages/plans 管理我的计划 -->
+<view class="page">
+
+  <view wx:if="{{loading && !list.length}}" class="loading-block">正在加载…</view>
+
+  <block wx:else>
+    <!--
+      ★ 提示卡与名单必须包在同一个 wx:if 里，empty-state 的 wx:else 才能接上。
+      直接把 wx:if 挂在提示卡上、wx:else 挂在 empty-state 上是不成立的：
+      中间隔着 wx:for 那张卡，wx:else 找不到它的 wx:if，
+      开发者工具会报「Bad attr `wx:else` ... wx:if not found」并停止编译整个文件。
+    -->
+    <block wx:if="{{list.length}}">
+      <view class="card card--flat plans__intro">
+        <view class="t-sub">
+          计划本身不产生任务。到了每期的开始日，系统才自动生成当期任务；
+          本期改动计划只影响以后的生成，已生成的任务不受影响。
+        </view>
+      </view>
+
+      <view
+        wx:for="{{list}}"
+        wx:key="_id"
+        class="card hit plans__item"
+        data-id="{{item._id}}"
+        bindtap="onPlanTap"
+      >
+        <view class="row row--between plans__head">
+          <text class="t-title plans__name">{{item.name}}</text>
+          <text class="badge {{item._stateTone}}">{{item._stateText}}</text>
+        </view>
+
+        <view class="plans__line">
+          <text class="plans__k">排期</text>
+          <text class="plans__v">{{item._schedule || '—'}}</text>
+        </view>
+
+        <view class="plans__line">
+          <text class="plans__k">本期</text>
+          <text class="plans__v t-mono">{{item._periodText || '—'}}</text>
+        </view>
+
+        <view class="plans__line">
+          <text class="plans__k">任务名</text>
+          <text class="plans__v">{{item._taskName || '—'}}</text>
+        </view>
+      </view>
+    </block>
+
+    <empty-state
+      wx:else
+      title="你还没有建过计划"
+      hint="到「报任务」页把任务性质选成「周期性」，就能建一份会自动生成任务的计划"
+    />
+  </block>
+</view>

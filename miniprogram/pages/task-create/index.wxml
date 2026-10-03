@@ -4,10 +4,10 @@
   <!-- ── 基本信息 ──────────────────────────────────────────────── -->
   <view class="card">
     <view class="field">
-      <view class="field__label field__label--required">任务名称</view>
+      <view class="field__label field__label--required">{{isPlan ? '计划名称' : '任务名称'}}</view>
       <input
         class="field__input"
-        placeholder="一句话说明要做什么"
+        placeholder="{{isPlan ? '例如：写报告 —— 系统会在名字前面加上期间' : '一句话说明要做什么'}}"
         placeholder-class="field__placeholder"
         value="{{form.task_name}}"
         data-field="task_name"
@@ -17,7 +17,7 @@
     </view>
 
     <view class="field">
-      <view class="field__label">任务详情 / 目标描述</view>
+      <view class="field__label">{{isPlan ? '计划说明' : '任务详情 / 目标描述'}}</view>
       <textarea
         class="field__textarea"
         placeholder="最终要实现什么目的、验收标准是什么…"
@@ -111,8 +111,8 @@
     </view>
   </view>
 
-  <!-- ── 时间 ──────────────────────────────────────────────────── -->
-  <view class="card">
+  <!-- ── 时间：一次性任务填具体日期 ─────────────────────────────── -->
+  <view wx:if="{{!isPlan}}" class="card">
     <picker mode="date" value="{{form.start_date}}" start="{{minDate}}" end="{{maxDate}}" bindchange="onStartDateChange">
       <view class="field--picker">
         <view class="field__label picker__label">计划开始时间</view>
@@ -136,8 +136,8 @@
     </picker>
   </view>
 
-  <!-- ── 周期性（选填）──────────────────────────────────────────── -->
-  <view class="card">
+  <!-- ── 周期性：一次性任务的周期标注（选填）────────────────────── -->
+  <view wx:if="{{!isPlan}}" class="card">
     <field-picker
       label="周期频率"
       field="recur_freq"
@@ -160,8 +160,28 @@
     </view>
 
     <view class="t-muted create__tip">
-      提示：需要系统每月自动生成的任务，请由管理员配置「周期任务模板」，
-      本表单创建的是一次性任务。
+      想让系统定期自动生成任务（例如「每月写报告」）？把上面的「任务性质」
+      改成「周期性」—— 本表单会切换成创建一份计划。当前建的是一次性任务，
+      上面两项只是标注它的重复特点。
+    </view>
+  </view>
+
+  <!-- ── 计划排期：选「任务性质 = 周期性」时出现 ───────────────── -->
+  <view wx:else class="card">
+    <plan-schedule
+      name="{{form.task_name}}"
+      period-type-idx="{{periodTypeIdx}}"
+      start-month-idx="{{startMonthIdx}}"
+      start-day="{{startDay}}"
+      end-month-idx="{{endMonthIdx}}"
+      end-day="{{endDay}}"
+      bind:change="onPlanScheduleChange"
+    />
+
+    <view class="t-muted create__tip">
+      本表单建的是一份计划，不是任务。到了每期的开始日，系统自动生成当期任务
+      （任务名 = 计划名称前面加上期间），主办人报进展、改状态都与普通任务一样。
+      本期已过期就不再补生成。
     </view>
   </view>
 </view>
@@ -172,5 +192,5 @@
     loading="{{submitting}}"
     disabled="{{submitting}}"
     bindtap="onSubmit"
-  >创建任务</button>
+  >{{isPlan ? '创建计划' : '创建任务'}}</button>
 </view>

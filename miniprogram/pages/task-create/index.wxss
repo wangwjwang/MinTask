@@ -35,3 +35,6 @@
   background: var(--bg);
   line-height: 1.6;
 }
+
+/* 计划模式的排期编辑器与它的预览区在 components/plan-schedule 里 ——
+   那份样式要和 plan-edit 共用，留在页面里页面之间就会各改各的。 */

@@ -1,12 +1,14 @@
 /**
  * pages/report —— Tab1「报任务」
  * ---------------------------------------------------------------------------
- * 自上而下四个区块（对应需求第 5 节 Tab1）：
+ * 自上而下五个区块（对应需求第 5 节 Tab1）：
  *   1. 我主办的任务      → 点击进语音上报页（主办视角，可改进度/状态）
  *   2. 我参与的协办任务  → 点击进语音上报页（协办视角，只能写进展+卡壳）
  *   3. 已完成            → 上述两组里已完成的合并去重，默认收起
- *   4. 新加入协办入口    → 进加入协办页
- *   （新建任务按钮固定在页面底部）
+ *   4. 新建任务入口      → 进新建页（手工任务 / 周期性计划）
+ *   5. 新加入协办入口    → 进加入协办页
+ *   ★ 4 和 5 是页面最下方的两张同形入口卡。4 原来是固定在底部的按钮栏，
+ *     2026-10-03 用户拍板改成入口行（理由见 index.wxml 区块 4 的注释）。
  *
  * ★ 已完成为什么要单独成组：
  *   已完成的任务不需要再报进度，留在"我主办/我协办"里只会把在办任务挤下去。
@@ -85,6 +87,49 @@ function pickStale(lists) {
 const STALE_COLLAPSE_AT = 5;
 
 /**
+ * 挑出「系统按计划生成、还没人碰过」的任务，给页顶的自动生成提醒区用。
+ *
+ * ★ 「碰过没有」一律看 task.latestProgressAt，不拿 progress/stage/status 三个字段猜。
+ *   progressService.add 每写一条进展记录都会重算 latestProgressAt（见
+ *   shared/taskRepo.recomputeTaskBlockers），而 progress/stage/status 只有
+ *   主办人能改 —— 协办人报了进展，那三个字段一个都不会变。靠它们判断的话，
+ *   协办报过进展的任务会一直挂在提醒区里，点进去才发现早就有人跟进了。
+ *
+ * ★ 另外三个字段是补 latestProgressAt 覆盖不到的路径：主办人直接改任务
+ *   （改状态/阶段/进度）而不写进展记录，此时 latestProgressAt 仍是空。
+ *
+ * ★ 判据是 origin === 'periodic'，不是 task_type === '周期性'。
+ *   后者是「这个任务按周期重复」的标注，手工建的任务也能填；前者才是
+ *   「这是系统代我生成的」。混在一起会把主办人自己建的任务也提醒一遍。
+ *
+ * ★ 只从「我主办」里挑：生成出来的任务落在计划主办人头上，而这个提醒
+ *   就是给他看的（"系统替我排了一件事，该动了"）。协办人是被拉来帮忙的，
+ *   他的入口是「我协办」那组列表。
+ *
+ * ★ 不做时间上限。判据就是用户定的那条：「动过就消失」—— 加一条"过期就
+ *   不提醒"会让任务在没人动的情况下自己溜走，与这条矛盾。逾期本身在卡片上
+ *   有红标，看板也能看到。
+ */
+function pickFresh(lists) {
+  const seen = {};
+  const out = [];
+  lists.forEach((list) => {
+    (list || []).forEach((t) => {
+      if (!t || t.origin !== 'periodic' || seen[t._id]) return;
+      if (t.latestProgressAt) return;
+      if (t.progress > 0) return;
+      if (t.stage !== '未开始') return;
+      if (t.status !== '正常') return;
+      if (t.hasOpenBlocker) return;
+      seen[t._id] = 1;
+      out.push(t);
+    });
+  });
+  // 先到期的排前面：提醒区的价值就在"下一个该交的是哪件"
+  return out.sort((a, b) => String(a.due_date || '').localeCompare(String(b.due_date || '')));
+}
+
+/**
  * 提醒区的展示切片。
  * ★ stale 永远是**完整名单**（判据的产物，测试与调试都按它核对），
  *   这里只决定模板铺几条 —— 折叠不改变数据，展开/收起也不重新拉取。
@@ -116,6 +161,14 @@ Page({
      * ★ 空数组时模板整块不渲染，不留空位。
      */
     stale: [],
+    /**
+     * 系统按计划自动生成、还没人碰过的任务（按截止日升序），渲染在**页顶最上面**。
+     * ★ 与 stale 同样是跨组子集，同样不进 stats（那三个数字与下方分组标题同源）。
+     * ★ 不做折叠：它在结构上就很短 —— 一个计划一期最多产生一条，而只要有人
+     *   碰一下（哪怕只是写句进展）就消失。真长起来说明确实堆了事，那时候
+     *   更需要全铺出来看。
+     */
+    fresh: [],
     /**
      * 提醒区实际铺出来的那几条（折叠后），以及给模板用的两个判断位。
      * 由 collapseStale 一次算出，三者的关系不要在任何别处重写一遍。
@@ -227,12 +280,16 @@ Page({
       const stale = pickStale([l.open, j.open]);
       const sv = collapseStale(stale, this.data.staleExpanded);
 
+      // 自动生成的提醒只看我主办的在办任务（理由见 pickFresh）
+      const fresh = pickFresh([l.open]);
+
       this.setData({
         led: l.open,
         ledDone: l.done,
         joined: j.open,
         joinedDone: j.done,
         doneAll,
+        fresh,
         stale,
         staleShown: sv.shown,
         staleMore: sv.more,
@@ -279,6 +336,18 @@ Page({
    *   两条路都通到同一个页面，别把这两个事件对象搞混。
    */
   onStaleTap(e) {
+    const task = e.currentTarget.dataset.task;
+    if (!task || !task._id) return;
+    wx.navigateTo({
+      url: `/pages/progress-add/index?taskId=${task._id}`,
+    });
+  },
+
+  /**
+   * 点自动生成提醒里的一条 → 进上报页。
+   * 与 onStaleTap 一样，任务从 data-task 里取（提醒区的行不是 task-card 组件）。
+   */
+  onFreshTap(e) {
     const task = e.currentTarget.dataset.task;
     if (!task || !task._id) return;
     wx.navigateTo({

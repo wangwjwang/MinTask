@@ -193,17 +193,52 @@ const progressApi = {
 };
 
 const aiApi = {
-  refine: (text) => call(config.functions.ai, 'refine', { text }, { silent: true }),
+  /**
+   * AI 精简。
+   *
+   * @param {string} text 用户口述/手录的原文
+   * @param {object} [task] 当前任务（progress-add 页面上的 this.data.task）。
+   *   ★ 必须带上：AI 看不到页面，不告诉它是哪件事，整理结果就只能泛泛而谈 ——
+   *     原文里的"那个""对方""弄完了"它没法写具体。任务还没加载完时传空即可，
+   *     云函数会退化成"盲整理"，不报错。
+   * @returns {Promise<{text:string, aiApplied:boolean, reason?:string, fields?:object}>}
+   */
+  refine: (text, task) =>
+    call(
+      config.functions.ai,
+      'refine',
+      {
+        text,
+        // ★ 字段名必须与 callAI/index.js 里读的 payload.taskName / payload.taskDetail 一致。
+        //   对不上不会报错，只会静默退化成盲整理 —— 测试脚本 tp-ai-context.js 锁住了这条。
+        taskName: (task && task.task_name) || '',
+        taskDetail: (task && task.detail) || '',
+      },
+      { silent: true }
+    ),
 };
 
+/**
+ * 周期计划（periodic_templates）。
+ * ★ 这里的 template 就是用户看到的「计划」—— 建它的入口在新建任务页
+ *   选「任务性质 = 周期性」时，不是另一套管理后台。
+ */
 const templateApi = {
   list: () => call(config.functions.template, 'list'),
+  /** 全部人的计划（不看归属）—— 任务看板「周期性计划」段用，只读 */
+  listAll: () => call(config.functions.template, 'listAll'),
+  /**
+   * 读一份计划（任何成员都能读）。不存在时 template 为 null，不抛错 ——
+   * 看板上的名单是几秒前拉的，点开时那份可能刚被别人删掉。
+   */
+  get: (templateId) => call(config.functions.template, 'get', { templateId }),
   create: (data) => call(config.functions.template, 'create', data),
   update: (templateId, patch) => call(config.functions.template, 'update', { templateId, patch }),
   toggle: (templateId) => call(config.functions.template, 'toggle', { templateId }),
   remove: (templateId) => call(config.functions.template, 'delete', { templateId }),
-  generateNow: (periodKey, dryRun) =>
-    call(config.functions.template, 'generateNow', { periodKey, dryRun }),
+  /** asOf 是「假装今天是哪天」，用于补跑历史周期；不传就按真实今天算 */
+  generateNow: (asOf, dryRun) =>
+    call(config.functions.template, 'generateNow', { asOf, dryRun }),
 };
 
 const notifyApi = {

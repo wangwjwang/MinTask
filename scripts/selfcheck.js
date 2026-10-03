@@ -195,6 +195,21 @@ check('协办人可退出', perm.canLeave(task, 'ou_li'), true);
 check('主办人不能退出自己的任务', perm.canLeave(task, 'ou_zhang'), false);
 check('外人无从退出', perm.canLeave(task, 'ou_wang'), false);
 
+// 删除：主办人或管理员。
+// ★ 管理员这一条不能省 —— 61 条历史导入的任务里 59 条没有 leaderId，
+//   若只允许主办，那些任务会变成谁也删不掉。
+check('主办人可删自己的任务', perm.canDeleteTask(task, 'ou_zhang', false), true);
+check('主办人加管理员身份仍可删', perm.canDeleteTask(task, 'ou_zhang', true), true);
+check('管理员可删他人的任务', perm.canDeleteTask(task, 'ou_wang', true), true);
+check('协办人不可删', perm.canDeleteTask(task, 'ou_li', false), false);
+check('外人不可删', perm.canDeleteTask(task, 'ou_wang', false), false);
+check('协办人即便是管理员也可删', perm.canDeleteTask(task, 'ou_li', true), true);
+// ★ 没有 leaderId 的历史任务：只有管理员删得掉
+const orphan = { leaderId: '', leader: '李杨', collaboratorIds: [] };
+check('无主办的任务管理员可删', perm.canDeleteTask(orphan, 'ou_wang', true), true);
+check('无主办的任务非管理员不可删', perm.canDeleteTask(orphan, 'ou_wang', false), false);
+check('openid 为空即便管理员也不放行', perm.canDeleteTask(task, '', true), false);
+
 // ★ 关键：姓名相同但 openid 不同，绝不能通过权限
 const impostor = { leaderId: 'ou_other', leader: '张三', collaboratorIds: [], stage: '进行中' };
 check('同名不同 openid 拿不到主办权限', perm.canEditTask(impostor, 'ou_zhang'), false);

@@ -15,7 +15,7 @@
  *   join                加入协办（自由加入，无需审批）
  *   leave               退出协办（仅本人）
  *   removeCollaborator  主办人移除协办人
- *   delete              删除任务（仅管理员）
+ *   delete              删除任务（主办人或管理员）
  *   adminCreate         管理员代建（可指定他人为主办人）
  * ---------------------------------------------------------------------------
  */
@@ -268,13 +268,21 @@ async function removeCollaborator(payload, ctx) {
 }
 
 /**
- * 删除任务（仅管理员）。
+ * 删除任务（主办人或管理员）。
  * 同时清理该任务下的进展记录，避免留下孤儿数据污染人员看板统计。
+ *
+ * ★ 为什么管理员必须保留：61 条历史导入的任务里 59 条没有 leaderId，
+ *   只允许主办的话那些任务将无人可删（详见 shared/perm.js 的 canDeleteTask）。
+ * ★ 判据走 perm.canDeleteTask，与前端同一份函数，不在这里重写一遍规则。
  */
 async function remove(payload, ctx) {
-  await ctx.requireAdmin();
+  const me = await ctx.requireMember();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
-  await ctx.getTaskOrThrow(taskId);
+  const task = await ctx.getTaskOrThrow(taskId);
+
+  if (!perm.canDeleteTask(task, ctx.openid, me.role === '管理员')) {
+    throw new BizError(Codes.FORBIDDEN_NOT_LEADER, '只有任务主办人或管理员可以删除');
+  }
 
   // 进展记录可能超过单次 100 条上限，循环删干净
   let removed = 0;

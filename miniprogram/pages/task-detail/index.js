@@ -38,6 +38,7 @@ Page({
     canJoin: false,
     canLeave: false,
     canReport: false,
+    canDelete: false,
     isAdmin: false,
 
     /** 我自己的 openid —— 判断卡壳记录是否"由我提交" */
@@ -83,7 +84,7 @@ Page({
         records,
         openBlockerCount: records.filter((r) => r.hasBlocker && !r.blockerResolved).length,
         loading: false,
-        ...this.computePerms(task, session.openid),
+        ...this.computePerms(task, session.openid, auth.isAdmin()),
       });
     } catch (e) {
       if (e.code !== 'NEED_CLAIM') {
@@ -94,8 +95,11 @@ Page({
     }
   },
 
-  /** 把权限判定集中到一处，避免散落在 WXML 里写表达式（易与后端口径漂移） */
-  computePerms(task, openid) {
+  /**
+   * 把权限判定集中到一处，避免散落在 WXML 里写表达式（易与后端口径漂移）。
+   * 全部走 shared/perm.js —— 与云函数调用的是同一份函数。
+   */
+  computePerms(task, openid, isAdmin) {
     return {
       isLeader: perm.isLeader(task, openid),
       isParticipant: perm.isParticipant(task, openid),
@@ -103,6 +107,7 @@ Page({
       canJoin: perm.canJoin(task, openid),
       canLeave: perm.canLeave(task, openid),
       canReport: perm.canAddProgress(task, openid),
+      canDelete: perm.canDeleteTask(task, openid, isAdmin),
     };
   },
 
@@ -191,7 +196,7 @@ Page({
     });
   },
 
-  /** 删除任务（仅管理员）。级联删除进展由云函数处理。 */
+  /** 删除任务（主办人或管理员）。级联删除进展由云函数处理。 */
   onDelete() {
     const task = this.data.task;
     toast

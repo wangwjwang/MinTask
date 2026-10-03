@@ -178,7 +178,7 @@
       <view wx:if="{{canLeave}}" class="btn btn--plain flex-1 hit" bindtap="onLeave">
         退出协办
       </view>
-      <view wx:if="{{isAdmin}}" class="btn btn--danger detail__del hit" bindtap="onDelete">
+      <view wx:if="{{canDelete}}" class="btn btn--danger detail__del hit" bindtap="onDelete">
         删除
       </view>
     </view>

@@ -95,6 +95,27 @@ function canRemoveCollaborator(task, openid) {
   return isLeader(task, openid);
 }
 
+/**
+ * 是否可删除任务。
+ * 规则：任务主办人，或管理员。
+ *
+ * ★ 为什么管理员这一条必须保留
+ *   历史导入的 61 条任务里有 59 条 leaderId 是空的 —— 本人还没来认领。
+ *   若把删除限定为"仅主办"，这 59 条会变成**谁都删不掉**（管理员也不行），
+ *   只能去云控制台手工删，还得连带清理进展记录。
+ *
+ * ★ 为什么 isAdmin 当参数传进来，而不是在这里查
+ *   本文件是纯函数、不依赖运行环境，拿不到 members 集合。
+ *   管理员身份由调用方判定：前端 auth.isAdmin()，云函数 (await ctx.requireMember()).role。
+ *   两边都必须把"当前用户是不是管理员"如实传进来 —— 传 true 就等于放弃这道校验。
+ *
+ * @param {boolean} isAdmin 当前用户是否管理员
+ */
+function canDeleteTask(task, openid, isAdmin) {
+  if (!openid) return false;
+  return isLeader(task, openid) || !!isAdmin;
+}
+
 module.exports = {
   isLeader,
   isParticipant,
@@ -105,4 +126,5 @@ module.exports = {
   canLeave,
   canResolveBlocker,
   canRemoveCollaborator,
+  canDeleteTask,
 };

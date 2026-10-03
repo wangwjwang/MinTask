@@ -55,8 +55,13 @@ Page({
         loading: false,
       });
     } catch (e) {
+      // NEED_CLAIM 由 auth 层接管跳认领页，这里不必再提示
       if (e.code !== 'NEED_CLAIM') {
         this.setData({ loading: false });
+        // ★ 不能只是 loading:false 收场：那样 list 仍是空的，界面会显示
+        //   「没有你协办的任务」并引导用户去"新加入协办" —— 用假前提指路。
+        //   同页群的 update / task-detail / report 遇错都是这句。
+        toast.error('加载失败，请下拉重试');
       }
     }
   },

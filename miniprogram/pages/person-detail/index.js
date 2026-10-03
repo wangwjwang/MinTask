@@ -15,8 +15,16 @@
 const auth = require('../../utils/auth');
 const db = require('../../utils/db');
 const fmt = require('../../utils/format');
+const swipe = require('../../utils/swipe');
 const toast = require('../../utils/toast');
 const { COLLECTIONS } = require('../../shared/constants');
+
+/**
+ * 分栏顺序表，顺序即渲染顺序，也是横滑的行走顺序。
+ * ★ 单独列出来而不是在 goTab 里写死 if：横滑要按它算"相邻是哪一栏"，
+ *   两个地方各写一份迟早会走岔。
+ */
+const TABS = ['led', 'joined'];
 
 Page({
   data: {
@@ -113,8 +121,41 @@ Page({
     this.setData({ shownOpen: open, shownDone: done });
   },
 
+  /**
+   * 切到某一栏。**点分栏与横滑两条路都走这里**（同看板的 goSegment）。
+   * 假值、或已经在这一栏上时直接返回。
+   */
+  goTab(tab) {
+    if (!tab || tab === this.data.tab) return;
+    this.setData({ tab }, () => {
+      this.applyTab();
+      // 切栏后回到页面顶部：两栏长短不一，停在上一栏的滚动位置会像没切成功
+      wx.pageScrollTo({ scrollTop: 0, duration: 0 });
+    });
+  },
+
   onTabChange(e) {
-    this.setData({ tab: e.currentTarget.dataset.tab }, () => this.applyTab());
+    this.goTab(e.currentTarget.dataset.tab);
+  },
+
+  /** 横滑：记住起点。绑在页面根节点上 */
+  onTouchStart(e) {
+    const t = e.touches && e.touches[0];
+    // 实例属性，不进 data —— 它不参与渲染
+    this.swipeStart = t ? { x: t.clientX, y: t.clientY } : null;
+  },
+
+  /** 横滑：判断这一次滑动是不是"切到相邻分栏" */
+  onTouchEnd(e) {
+    const start = this.swipeStart;
+    this.swipeStart = null;
+    if (!start) return;
+    // ★ touchend 时手指已经抬起，e.touches 是空的 —— 必须用 changedTouches
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    const step = swipe.swipeStep(start, { x: t.clientX, y: t.clientY });
+    if (!step) return;
+    this.goTab(swipe.stepIn(TABS, this.data.tab, step));
   },
 
   onToggleDone() {

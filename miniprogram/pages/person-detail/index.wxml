@@ -1,5 +1,15 @@
-<!-- pages/person-detail 某成员名下的任务 -->
-<view class="page">
+<!--
+  pages/person-detail 某成员名下的任务
+
+  ★ 支持横向滑动切换分栏（左右滑 = 主办 ⇄ 协办，到头停住不循环）。
+    绑在页面根节点上，手在列表任意位置起划都算；判据在 utils/swipe.js，
+    竖着划/斜着划不截走手势，页面照常滚。
+-->
+<view
+  class="page"
+  bindtouchstart="onTouchStart"
+  bindtouchend="onTouchEnd"
+>
 
   <!--
     ── 分栏：主办 / 协办 ───────────────────────────────────────

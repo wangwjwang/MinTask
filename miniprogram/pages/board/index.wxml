@@ -12,8 +12,16 @@
       周期性段为空时会渲染一个空视图，后面的 wx:elif / wx:else 永远轮不到，
       「这一段下没有任务」就永远出不来。
     ★ 链中间不能插注释（见 update 页的告示），所以说明全写在这里。
+
+  ★ v2.2：支持横向滑动切换分段（左右滑 = 切到相邻分段，到头停住不循环）。
+    绑在页面根节点上，手在列表任意位置起划都算；判据在 utils/swipe.js，
+    竖着划/斜着划不截走手势，页面照常滚。
 -->
-<view class="page">
+<view
+  class="page"
+  bindtouchstart="onTouchStart"
+  bindtouchend="onTouchEnd"
+>
 
   <!-- ── 汇总统计（IKEA 参考图顶部那排胶囊）────────────────────── -->
   <view class="board__summary">

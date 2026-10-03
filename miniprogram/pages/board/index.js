@@ -38,6 +38,7 @@ const api = require('../../utils/api');
 const auth = require('../../utils/auth');
 const db = require('../../utils/db');
 const fmt = require('../../utils/format');
+const swipe = require('../../utils/swipe');
 const theme = require('../../utils/theme');
 const toast = require('../../utils/toast');
 const C = require('../../shared/constants');
@@ -230,12 +231,47 @@ Page({
     });
   },
 
-  /** 切换分段 */
+  /**
+   * 切到某个分段。**点分段与横滑两条路都走这里** ——
+   * 切换要做的事（重建列表、滚动归位）只有一个出口，不会出现"点能滚到顶、
+   * 滑不滚"这种两套逻辑各差一点的情况。
+   * 参数为假值、或已经在这个分段上时直接返回（免得白重建一次、白滚一次）。
+   */
+  goSegment(seg) {
+    if (!seg || seg === this.data.segmentTab) return;
+    this.setData({ segmentTab: seg }, () => {
+      this.applyFilter();
+      // ★ 切段后回到页面顶部：各分段长短不一，停在上一段的滚动位置会
+      //   一眼看到空白或者半截列表，像是没切成功。
+      wx.pageScrollTo({ scrollTop: 0, duration: 0 });
+    });
+  },
+
+  /** 点分段标签切换 */
   onSegmentTap(e) {
     // 注意：dataset 的键名会被小程序转成小写，这里只传中文值（分段名），不受影响
-    const seg = e.currentTarget.dataset.segment;
-    if (!seg || seg === this.data.segmentTab) return;
-    this.setData({ segmentTab: seg }, () => this.applyFilter());
+    this.goSegment(e.currentTarget.dataset.segment);
+  },
+
+  /** 横滑：记住起点。绑在页面根节点上，页面内任何位置起手都算 */
+  onTouchStart(e) {
+    const t = e.touches && e.touches[0];
+    // 实例属性，不进 data —— 它不参与渲染，每帧写进 data 是白费 setData
+    this.swipeStart = t ? { x: t.clientX, y: t.clientY } : null;
+  },
+
+  /** 横滑：判断这一次滑动是不是"切到相邻分段" */
+  onTouchEnd(e) {
+    const start = this.swipeStart;
+    this.swipeStart = null;
+    if (!start) return;
+    // ★ touchend 时手指已经抬起，e.touches 是空的 —— 必须用 changedTouches，
+    //   写 e.touches[0] 在这里取到的是 undefined。
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    const step = swipe.swipeStep(start, { x: t.clientX, y: t.clientY });
+    if (!step) return;
+    this.goSegment(swipe.stepIn(SEGMENTS, this.data.segmentTab, step));
   },
 
   /**

@@ -12,9 +12,9 @@
   bindtap="onTap"
 >
   <!-- 第一行：分类色方块 + 任务名 + 任务来源 -->
-  <view class="row row--between task-card__head">
-    <view class="flex-1 task-card__title">
-      <view class="chip__dot task-card__dot" style="background: {{task._catColor}}"></view>
+  <view class="row row--between row--top task-card__head">
+    <view class="row row--top flex-1 task-card__title">
+      <view class="chip__dot chip__dot--lead" style="background: {{task._catColor}}"></view>
       <view class="t-title ellipsis-2 task-card__name">{{task.task_name}}</view>
     </view>
     <view wx:if="{{task.source}}" class="tag task-card__source">{{task.source}}</view>

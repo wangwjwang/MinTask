@@ -28,6 +28,7 @@ const api = require('../../utils/api');
 const auth = require('../../utils/auth');
 const db = require('../../utils/db');
 const fmt = require('../../utils/format');
+const theme = require('../../utils/theme');
 const toast = require('../../utils/toast');
 const { clientToken } = require('../../shared/idempotency');
 const { STATUS, STAGE, COLLECTIONS } = require('../../shared/constants');
@@ -52,6 +53,14 @@ Page({
     progress: 0,
     status: '',
     stage: '',
+
+    /**
+     * 进度条主色。
+     * ★ <slider activeColor> 只吃十六进制字面量，写 var(--primary) 不生效，
+     *   所以主色在 utils/theme.js 里另有一份 JS 常量。
+     *   改主色时 theme.js 与 app.wxss 必须同改（两处都有注明）。
+     */
+    primaryColor: theme.PRIMARY,
 
     /** 枚举选项（供 picker 使用） */
     statusOptions: STATUS,

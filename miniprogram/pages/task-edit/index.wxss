@@ -23,34 +23,10 @@
   overflow-y: auto;
 }
 
-.edit__member {
-  display: flex;
-  align-items: center;
-  padding: 22rpx 4rpx;
-  border-bottom: 2rpx solid var(--divider);
-}
-
-.edit__member:last-child {
-  border-bottom: none;
-}
-
-.edit__member--on {
-  color: var(--primary);
-}
-
-.edit__member-name {
-  font-size: 28rpx;
-}
-
-.edit__member-dept {
-  margin-left: 12rpx;
-}
-
-.edit__member-check {
-  color: var(--primary);
-  font-size: 32rpx;
-  font-weight: 600;
-}
+/*
+ * ★ 成员行（.pick-row 系列）与勾选标记（.pick__check）已上提到 app.wxss。
+ *   本页原先抄了一份与报任务页逐字相同的 .edit__member*，现已删除。
+ */
 
 /* ── 底部按钮组 ── */
 

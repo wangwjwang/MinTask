@@ -2,10 +2,15 @@
 
 /* ── 任务信息卡 ── */
 
+/* 分类色方块 + 任务名（与 task-card 同构，方块偏移量在全局 .chip__dot--lead） */
+.detail__title {
+  gap: 12rpx;
+}
+
 /* 首行右侧的任务来源标签（与 task-card 的 __source 同款处理） */
 .detail__source {
   flex-shrink: 0;
-  margin-top: 4rpx;
+  margin-top: 6rpx;
   margin-left: 16rpx;
 }
 
@@ -39,16 +44,20 @@
   display: block;
 }
 
+/*
+ * 标签列定宽 160rpx 而不是自适应 —— 10 行字段的左边缘因此对齐成一条直线，
+ * 自上而下扫读时值列不会左右跳动。
+ */
 .detail__key {
   width: 160rpx;
   flex-shrink: 0;
-  font-size: 26rpx;
+  font-size: var(--fs-sub);
   color: var(--muted);
 }
 
 .detail__val {
   flex: 1;
-  font-size: 28rpx;
+  font-size: var(--fs-body);
   color: var(--text);
   word-break: break-all;
 }
@@ -67,14 +76,16 @@
   font-weight: 600;
 }
 
+/* 与列表卡片 .task-card__due--done 同一个色 —— 同一次 dueInfo() 的判定
+   不该因为出现在哪个页面而变一个灰 */
 .detail__val--done {
-  color: var(--muted);
+  color: var(--tone-done);
 }
 
 .detail__para {
   display: block;
   margin-top: 12rpx;
-  font-size: 28rpx;
+  font-size: var(--fs-body);
   line-height: 1.7;
   color: var(--text-sub);
   white-space: pre-wrap;
@@ -87,8 +98,9 @@
   padding-bottom: 8rpx;
 }
 
+/* 左边线与 .card--blocked 同为 8rpx —— 全站的左侧强调条只有一种粗细 */
 .record {
-  border-left: 6rpx solid var(--border);
+  border-left: 8rpx solid var(--border);
 }
 
 /* 有卡壳的记录用红条，已解决则转灰 —— 让时间线一眼扫出问题条目 */
@@ -106,7 +118,7 @@
 }
 
 .record__who {
-  font-size: 28rpx;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text);
 }
@@ -116,7 +128,7 @@
 }
 
 .record__desc {
-  font-size: 28rpx;
+  font-size: var(--fs-body);
   line-height: 1.7;
   color: var(--text);
   white-space: pre-wrap;
@@ -135,7 +147,7 @@
 }
 
 .record__block-label {
-  font-size: 24rpx;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--tone-danger);
 }
@@ -147,7 +159,7 @@
 .record__block-text {
   display: block;
   margin-top: 8rpx;
-  font-size: 27rpx;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--text);
   word-break: break-all;
@@ -155,7 +167,7 @@
 
 .record__resolve {
   height: 52rpx;
-  font-size: 22rpx;
+  font-size: var(--fs-micro);
   padding: 0 20rpx;
 }
 
@@ -167,7 +179,7 @@
 }
 
 .record__need-label {
-  font-size: 24rpx;
+  font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--tone-warn);
 }
@@ -175,7 +187,7 @@
 .record__need-text {
   display: block;
   margin-top: 8rpx;
-  font-size: 27rpx;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--text);
   word-break: break-all;
@@ -194,7 +206,7 @@
   border-radius: var(--radius-sm);
   background: var(--tone-danger-bg);
   color: var(--tone-danger);
-  font-size: 24rpx;
+  font-size: var(--fs-caption);
   text-align: center;
 }
 

@@ -16,6 +16,7 @@ const api = require('../../utils/api');
 const auth = require('../../utils/auth');
 const db = require('../../utils/db');
 const fmt = require('../../utils/format');
+const theme = require('../../utils/theme');
 const toast = require('../../utils/toast');
 const C = require('../../shared/constants');
 const dates = require('../../shared/dates');
@@ -51,6 +52,14 @@ Page({
     /** 日期选择器范围 */
     minDate: '',
     maxDate: '',
+
+    /**
+     * 进度条主色。
+     * ★ <slider activeColor> 只吃十六进制字面量，写 var(--primary) 不生效，
+     *   所以主色在 utils/theme.js 里另有一份 JS 常量。
+     *   改主色时 theme.js 与 app.wxss 必须同改（两处都有注明）。
+     */
+    primaryColor: theme.PRIMARY,
 
     /** 语音播报式的变更摘要，保存成功后展示 */
     dirtyCount: 0,

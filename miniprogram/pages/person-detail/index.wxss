@@ -1,33 +1,13 @@
 /* pages/person-detail */
 
-.ptabs {
-  display: flex;
-  gap: 12rpx;
-  padding: 6rpx;
-  margin-bottom: 20rpx;
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: 0 2rpx 12rpx rgba(16, 24, 40, 0.04);
-}
-
-.ptabs__item {
-  flex: 1;
-  text-align: center;
-  padding: 20rpx 0;
-  border-radius: var(--radius-sm);
-  font-size: 28rpx;
-  color: var(--text-sub);
-  transition: background 0.15s ease;
-}
-
-.ptabs__item--on {
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.ptabs__num {
-  font-size: 24rpx;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.8;
+/*
+ * 主办 / 协办 分栏用全局 .seg（与任务看板的阶段切换同一套）。
+ * 这里只补外边距 —— 外观定义在 app.wxss，不在这里复写。
+ *
+ * v1 这里是一套自制的 .ptabs：卡片底 + 圆角 + box-shadow。
+ * 换成 .seg 顺带解决两件事：去掉了一处阴影（全站不用阴影），
+ * 以及消除了「同一个应用里两种分段控件」的不一致。
+ */
+.person__seg {
+  margin-bottom: var(--gap);
 }

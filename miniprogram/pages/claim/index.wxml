@@ -12,6 +12,11 @@
     </view>
 
     <block wx:if="{{list.length}}">
+      <!--
+        ★ 这是新同事看到的第一屏，所以说明文字不做成一句小字提示，
+          而是放在卡片里正说 —— 选错名字的后果（改不了自己的任务）
+          必须在他点下去之前就讲清楚。
+      -->
       <view class="card card--flat claim__intro">
         <view class="t-sub">
           请从下方选择你的姓名。系统用它来判定任务权限 —— 选错会导致你无法修改自己的任务。
@@ -23,21 +28,31 @@
         <text class="section-title__count">{{list.length}} 人</text>
       </view>
 
+      <!--
+        成员卡沿用人员看板的 .member 结构（定义在 app.wxss）：
+        姓名首字做头像占位，一列人扫下来比纯文字名单好找得多。
+        这里不显示任务负载数字 —— 还没认领就没有归属数据，显示 0 只会误导。
+      -->
       <view
         wx:for="{{list}}"
         wx:key="_id"
-        class="card claim__item hit {{selectedId === item._id ? 'claim__item--active' : ''}}"
+        class="card member claim__item hit {{selectedId === item._id ? 'claim__item--active' : ''}}"
         data-id="{{item._id}}"
         bindtap="onSelect"
       >
-        <view class="row row--between">
-          <view class="flex-1">
-            <view class="t-title">{{item.name}}</view>
-            <view wx:if="{{item.dept}}" class="t-muted">{{item.dept}}</view>
+        <view class="member__avatar">{{item.name}}</view>
+
+        <view class="flex-1 member__main">
+          <view class="row">
+            <text class="member__name">{{item.name}}</text>
+            <text wx:if="{{item.role === '管理员'}}" class="badge badge--active member__tag">管理员</text>
           </view>
-          <view wx:if="{{item.role === '管理员'}}" class="badge badge--active">管理员</view>
-          <view wx:if="{{selectedId === item._id}}" class="claim__check">✓</view>
+          <view wx:if="{{item.dept}}" class="row member__dept">
+            <text class="t-muted">{{item.dept}}</text>
+          </view>
         </view>
+
+        <text wx:if="{{selectedId === item._id}}" class="pick__check">✓</text>
       </view>
     </block>
   </block>

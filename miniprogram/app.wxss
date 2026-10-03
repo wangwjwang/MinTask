@@ -52,7 +52,10 @@ page {
   --tone-warn-bg: #FEF4E6;
   --tone-danger: #DC2626;
   --tone-danger-bg: #FDECEB;
-  /* 卡壳标记的描边。原来写死 rgba(220,38,38,.25)，现在从主色派生 */
+  /* 卡壳标记的描边 = --tone-danger 的 25% 透明度。
+     ★ 必须在这里写十六进制/rgba 字面量，不能写 var(--tone-danger) ——
+       WXSS 不支持 color-mix()，也没有透明色令牌可以引用。
+       改 --tone-danger 时这一行要跟着手改。 */
   --tone-danger-border: rgba(220, 38, 38, 0.25);
   --tone-active: #2563EB;
   --tone-active-bg: #E8EFFC;
@@ -124,6 +127,11 @@ page {
 
 .row--between {
   justify-content: space-between;
+}
+
+/* 顶对齐。卡片首行「方块 + 可折行标题 + 右上角标签」用这个，不用默认的居中对齐 */
+.row--top {
+  align-items: flex-start;
 }
 
 .row--wrap {
@@ -233,7 +241,7 @@ page {
   justify-content: center;
   height: 88rpx;
   border-radius: var(--radius);
-  font-size: 30rpx;
+  font-size: var(--fs-body);
   font-weight: 500;
   border: none;
   line-height: 1;
@@ -318,7 +326,7 @@ page {
 
 .field__input {
   width: 100%;
-  font-size: 30rpx;
+  font-size: var(--fs-body);
   color: var(--text);
   min-height: 48rpx;
 }
@@ -326,7 +334,7 @@ page {
 .field__textarea {
   width: 100%;
   min-height: 160rpx;
-  font-size: 30rpx;
+  font-size: var(--fs-body);
   color: var(--text);
   line-height: 1.6;
 }
@@ -366,7 +374,7 @@ page {
 }
 
 .field__value {
-  font-size: 30rpx;
+  font-size: var(--fs-body);
   color: var(--text);
 }
 
@@ -652,7 +660,157 @@ page {
   background: var(--placeholder); /* theme.js 取不到色时的兜底 */
 }
 
+/*
+ * 方块贴在 --fs-title 级标题的**首行中线**上。
+ * 标题可能折成两行（列表卡最多两行、详情页不截断），
+ * 所以不能靠 align-items: center —— 那会让方块掉到两行中间。
+ * 偏移量按 --fs-title（34rpx）× 1.5 行高算：（51 − 16）÷ 2 ≈ 18rpx。
+ * 任务卡与任务详情共用，改字号时这两处一起动。
+ */
+.chip__dot--lead {
+  margin-top: 18rpx;
+}
+
 .chip__text {
   font-size: var(--fs-caption);
   color: var(--text-sub);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   成员卡片 —— 人员看板与认领页共用
+
+   放在全局而不是 people 页：认领页也要用同一张卡，而页面 WXSS 不跨页生效
+   （样式隔离），共享定义只能上提。与 .field--picker 是同一类处理。
+   ───────────────────────────────────────────────────────────────────────── */
+
+.member {
+  display: flex;
+  align-items: center;
+}
+
+.member--me {
+  border-left: 8rpx solid var(--primary);
+}
+
+.member--unclaimed {
+  opacity: 0.6;
+}
+
+/*
+ * 头像用姓名文字代替图片：团队 10 余人、名单固定，
+ * 引入头像图片反而要多一套上传/存储流程，收益不值。
+ */
+.member__avatar {
+  width: 88rpx;
+  height: 88rpx;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+  padding: 0 6rpx;
+  box-sizing: border-box;
+}
+
+.member__avatar--off {
+  background: var(--divider);
+  color: var(--muted);
+}
+
+.member__main {
+  min-width: 0;
+}
+
+.member__name {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.member__tag {
+  margin-left: 10rpx;
+}
+
+.member__dept {
+  margin-top: 6rpx;
+}
+
+/* ── 负载数字（只有人员看板会渲染）── */
+
+.member__stats {
+  flex-wrap: wrap;
+  gap: 24rpx;
+  margin-top: 12rpx;
+}
+
+.member__stat {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.member__num {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.member__stat--open .member__num {
+  color: var(--primary);
+}
+
+.member__stat--done .member__num {
+  color: var(--tone-ok);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   可勾选的成员行 —— 报任务与改任务共用
+
+   与上面的 .member 卡片的区别：这里是**表单内的紧凑行**，没有头像，
+   靠分隔线连成一张列表。两者形式不同、用途不同，所以不合并。
+   但 .create__member* 与 .edit__member* 曾是逐字相同的两份，合到这里。
+   ───────────────────────────────────────────────────────────────────────── */
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 4rpx;
+  border-bottom: 2rpx solid var(--divider);
+}
+
+.pick-row:last-child {
+  border-bottom: none;
+}
+
+/* 选中行整体转主色，姓名与勾随之变色（部门用 .t-muted 覆盖回灰） */
+.pick-row--on {
+  color: var(--primary);
+}
+
+.pick-row__name {
+  font-size: var(--fs-body);
+}
+
+.pick-row__dept {
+  margin-left: 12rpx;
+}
+
+/*
+ * 勾选标记 —— 认领页的成员卡、报任务/改任务的成员行共用一个勾。
+ * 三处原先各写了一份（34/32/32rpx），现在统一为 --fs-title。
+ */
+.pick__check {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  color: var(--primary);
+  font-size: var(--fs-title);
+  font-weight: 600;
 }

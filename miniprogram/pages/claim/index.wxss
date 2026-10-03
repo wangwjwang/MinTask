@@ -1,4 +1,4 @@
-/* pages/claim */
+/* pages/claim 认领页 */
 
 .claim__intro {
   margin-bottom: var(--gap);
@@ -17,6 +17,12 @@
   margin-top: 24rpx;
 }
 
+/*
+ * 成员卡的布局（avatar / name / dept）在 app.wxss 的 .member 系列里，
+ * 与人员看板共用。这里只加"可选中"这一层语义 ——
+ * 选中态是一圈主色描边，不是背景填色：
+ * 填色会和卡壳红条、状态徽标的浅底色混淆，描边则明确是"你选中了它"。
+ */
 .claim__item {
   border: 4rpx solid transparent;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -27,9 +33,6 @@
   background: var(--primary-soft);
 }
 
-.claim__check {
-  margin-left: 16rpx;
-  color: var(--primary);
-  font-size: 36rpx;
-  font-weight: 600;
-}
+/*
+ * 勾选标记（.pick__check）在 app.wxss —— 与报任务/改任务的成员行共用一个勾。
+ */

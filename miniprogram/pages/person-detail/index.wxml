@@ -1,18 +1,28 @@
 <!-- pages/person-detail 某成员名下的任务 -->
 <view class="page">
 
-  <!-- ── 分栏：主办 / 协办 ─────────────────────────────────────── -->
-  <view class="ptabs">
+  <!--
+    ── 分栏：主办 / 协办 ───────────────────────────────────────
+    用全局 .seg（与任务看板的阶段切换同一套），不再自制一套带阴影的分段控件 ——
+    两处做的是同一件事（在两个列表之间切换），样式必须一致。
+  -->
+  <view class="seg person__seg">
     <view
-      class="ptabs__item {{tab === 'led' ? 'ptabs__item--on' : ''}}"
+      class="seg__item {{tab === 'led' ? 'seg__item--on' : ''}} hit"
       data-tab="led"
       bindtap="onTabChange"
-    >主办 <text class="ptabs__num">{{led.length + ledDone.length}}</text></view>
+    >
+      <text>主办</text>
+      <text class="seg__count">{{led.length + ledDone.length}}</text>
+    </view>
     <view
-      class="ptabs__item {{tab === 'joined' ? 'ptabs__item--on' : ''}}"
+      class="seg__item {{tab === 'joined' ? 'seg__item--on' : ''}} hit"
       data-tab="joined"
       bindtap="onTabChange"
-    >协办 <text class="ptabs__num">{{joined.length + joinedDone.length}}</text></view>
+    >
+      <text>协办</text>
+      <text class="seg__count">{{joined.length + joinedDone.length}}</text>
+    </view>
   </view>
 
   <view wx:if="{{loading}}" class="loading-block">正在加载…</view>

@@ -22,34 +22,11 @@
   text-align: center;
 }
 
-.create__member {
-  display: flex;
-  align-items: center;
-  padding: 22rpx 4rpx;
-  border-bottom: 2rpx solid var(--divider);
-}
-
-.create__member:last-child {
-  border-bottom: none;
-}
-
-.create__member--on {
-  color: var(--primary);
-}
-
-.create__member-name {
-  font-size: 28rpx;
-}
-
-.create__member-dept {
-  margin-left: 12rpx;
-}
-
-.create__member-check {
-  color: var(--primary);
-  font-size: 32rpx;
-  font-weight: 600;
-}
+/*
+ * ★ 成员行（.pick-row 系列）与勾选标记（.pick__check）已上提到 app.wxss。
+ *   原先报任务和改任务各写了一份逐字相同的 .create__member* / .edit__member*，
+ *   同 .field--picker 一样属于跨页重复定义，只能放全局。
+ */
 
 .create__tip {
   margin-top: 20rpx;

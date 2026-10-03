@@ -98,15 +98,15 @@
       <view
         wx:for="{{allMembers}}"
         wx:key="_id"
-        class="create__member hit {{collaboratorIds.indexOf(item.openid) !== -1 ? 'create__member--on' : ''}}"
+        class="pick-row hit {{collaboratorIds.indexOf(item.openid) !== -1 ? 'pick-row--on' : ''}}"
         data-openid="{{item.openid}}"
         bindtap="onToggleMember"
       >
         <view class="flex-1">
-          <text class="create__member-name">{{item.name}}</text>
-          <text wx:if="{{item.dept}}" class="t-muted create__member-dept">{{item.dept}}</text>
+          <text class="pick-row__name">{{item.name}}</text>
+          <text wx:if="{{item.dept}}" class="t-muted pick-row__dept">{{item.dept}}</text>
         </view>
-        <view wx:if="{{collaboratorIds.indexOf(item.openid) !== -1}}" class="create__member-check">✓</view>
+        <view wx:if="{{collaboratorIds.indexOf(item.openid) !== -1}}" class="pick__check">✓</view>
       </view>
     </view>
   </view>

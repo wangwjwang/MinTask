@@ -103,7 +103,7 @@
           max="100"
           step="5"
           value="{{progress}}"
-          activeColor="#2b6cff"
+          activeColor="{{primaryColor}}"
           block-size="24"
           bindchanging="onProgressChange"
           bindchange="onProgressChange"

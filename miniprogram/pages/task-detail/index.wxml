@@ -7,8 +7,16 @@
 
     <!-- ── 任务信息 ─────────────────────────────────────────────── -->
     <view class="card detail__head {{task._hasBlocker ? 'card--blocked' : ''}}">
-      <view class="row row--between">
-        <view class="flex-1 t-title" bindlongpress="onCopyTaskName">{{task.task_name}}</view>
+      <!--
+        首行与列表卡片同构：分类色方块 + 任务名 + 来源标签。
+        任务名在详情页**不截断** —— 列表里两行省略是为了让卡片等高，
+        这里没有这个约束，把名字截断只会逼用户去别处找全名。
+      -->
+      <view class="row row--between row--top">
+        <view class="row row--top flex-1 detail__title">
+          <view class="chip__dot chip__dot--lead" style="background: {{task._catColor}}"></view>
+          <view class="t-title" bindlongpress="onCopyTaskName">{{task.task_name}}</view>
+        </view>
         <view wx:if="{{task.source}}" class="tag detail__source">{{task.source}}</view>
       </view>
 

@@ -19,99 +19,17 @@
   margin-bottom: 16rpx;
   border: 1rpx dashed var(--border);
   border-radius: var(--radius-sm);
-  font-size: 26rpx;
+  font-size: var(--fs-sub);
   color: var(--tone-active);
 }
 
 .people__admin-sub {
-  font-size: 22rpx;
+  font-size: var(--fs-micro);
   color: var(--muted);
-}
-
-/* ── 成员卡片 ── */
-
-.member {
-  display: flex;
-  align-items: center;
-}
-
-.member--me {
-  border-left: 8rpx solid var(--primary);
-}
-
-.member--unclaimed {
-  opacity: 0.6;
 }
 
 /*
- * 头像用姓名文字代替图片：团队 10 余人、名单固定，
- * 引入头像图片反而要多一套上传/存储流程，收益不值。
+ * ★ 成员卡片（.member / .member__avatar / …）已上提到 app.wxss。
+ *   认领页也要用同一张卡，而页面 WXSS 不跨页生效（样式隔离），
+ *   所以共享定义只能放全局。与 .field--picker 是同一类处理。
  */
-.member__avatar {
-  width: 88rpx;
-  height: 88rpx;
-  flex-shrink: 0;
-  margin-right: 20rpx;
-  border-radius: 50%;
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: 24rpx;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  line-height: 1.2;
-  overflow: hidden;
-  padding: 0 6rpx;
-  box-sizing: border-box;
-}
-
-.member__avatar--off {
-  background: var(--divider);
-  color: var(--muted);
-}
-
-.member__main {
-  min-width: 0;
-}
-
-.member__name {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.member__tag {
-  margin-left: 10rpx;
-}
-
-.member__dept {
-  margin-top: 6rpx;
-}
-
-.member__stats {
-  flex-wrap: wrap;
-  gap: 24rpx;
-  margin-top: 12rpx;
-}
-
-.member__stat {
-  font-size: 24rpx;
-  color: var(--muted);
-}
-
-.member__num {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.member__stat--open .member__num {
-  color: var(--primary);
-}
-
-.member__stat--done .member__num {
-  color: var(--tone-ok);
-}

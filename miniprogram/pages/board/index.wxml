@@ -60,12 +60,17 @@
 
   <block wx:else>
     <view wx:if="{{segmentTab === '周期性' && flat.length}}">
-      <!-- 周期性段：平铺，顺序即周期顺序（index.js 里已排好） -->
+      <!--
+        周期性段：平铺，顺序即周期顺序（index.js 里已排好）。
+        ★ 传 recur-mode：这一段是「按周期看」，右上角该是周期（每月）而不是来源。
+          下面分组列表那一处不传 —— 它是「按阶段看」，来源仍是有用的信息。
+      -->
       <task-card
         wx:for="{{flat}}"
         wx:for-item="task"
         wx:key="_id"
         task="{{task}}"
+        recur-mode="{{true}}"
         bind:tap="onTaskTap"
       />
     </view>

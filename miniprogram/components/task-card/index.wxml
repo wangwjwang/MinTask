@@ -11,13 +11,20 @@
   class="task-card hit {{task._hasBlocker ? 'card--blocked' : ''}}"
   bindtap="onTap"
 >
-  <!-- 第一行：分类色方块 + 任务名 + 任务来源 -->
+  <!--
+    第一行：分类色方块 + 任务名 + 右上角标签
+    ★ 右上角放什么由 recurMode 定：周期语境放周期频率（「每月」），否则放任务来源。
+      两条分支必须紧挨着，中间不能插注释 —— 会断开 wx:if / wx:elif 链。
+    ★ 周期性任务若没填周期频率（recur_freq = 不适用），右上角就显示「不适用」：
+      与看板把这类任务排在最后的做法一致，比留空或退回显示来源更诚实。
+  -->
   <view class="row row--between row--top task-card__head">
     <view class="row row--top flex-1 task-card__title">
       <view class="chip__dot chip__dot--lead" style="background: {{task._catColor}}"></view>
       <view class="t-title ellipsis-2 task-card__name">{{task.task_name}}</view>
     </view>
-    <view wx:if="{{task.source}}" class="tag task-card__source">{{task.source}}</view>
+    <view wx:if="{{recurMode && task.recur_freq}}" class="tag task-card__source">{{task.recur_freq}}</view>
+    <view wx:elif="{{!recurMode && task.source}}" class="tag task-card__source">{{task.source}}</view>
   </view>
 
   <!-- 第二行：状态 / 阶段 / 卡壳标记 -->
@@ -27,7 +34,8 @@
     <view wx:if="{{task._hasBlocker}}" class="blocker-flag">
       <text>卡壳</text>
     </view>
-    <view wx:if="{{task.origin === 'periodic'}}" class="tag">周期</view>
+    <!-- 周期语境下右上角已经写着周期了，这里再挂一个「周期」就是重复 -->
+    <view wx:if="{{task.origin === 'periodic' && !recurMode}}" class="tag">周期</view>
   </view>
 
   <!-- 进度条 -->

@@ -127,6 +127,19 @@ function progressOf(taskId) {
   );
 }
 
+/**
+ * 某时刻之后的全部进展记录（近两周动态用），最新的在前。
+ *
+ * ★ 一次拉窗口内全量、在页面内存里按 updaterId 归并 —— 与人员看板
+ *   「一次拉全量任务再归并」同一套路：不给每个成员各查一次（N+1），
+ *   10 人规模下两周的记录量也远小于 fetchMax（500）。
+ */
+function progressSince(since) {
+  return fetchFrom(COLLECTIONS.PROGRESS_RECORDS, (q) =>
+    q.where({ updatedAt: cmd().gte(since) }).orderBy('updatedAt', 'desc')
+  );
+}
+
 /** 全部成员 */
 function allMembers() {
   return fetchFrom(COLLECTIONS.MEMBERS, (q) => q);
@@ -154,6 +167,7 @@ module.exports = {
   joinableTasks,
   allTasks,
   progressOf,
+  progressSince,
   allMembers,
   tasksOfMember,
 };

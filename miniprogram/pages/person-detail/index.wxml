@@ -1,20 +1,25 @@
 <!--
   pages/person-detail 某成员名下的任务
 
-  ★ 支持横向滑动切换分栏（左右滑 = 主办 ⇄ 协办，到头停住不循环）。
-    绑在页面根节点上，手在列表任意位置起划都算；判据在 utils/swipe.js，
-    竖着划/斜着划不截走手势，页面照常滚。
+  ★ 支持横向滑动切换分栏（左右滑 = 主办 ⇄ 协办 ⇄ 近两周，到头停住不循环）。
+    绑在页面根节点上，手在列表任意位置起划都算；判据在 utils/swipe.js。
+    ★ 认的是**首动方向**：起手往纵向走的当滚页面，后面横向偏得再多也不切栏；
+      只看终点会把「斜着往下滚」误判成横滑（同看板）。
 -->
 <view
   class="page"
   bindtouchstart="onTouchStart"
+  bindtouchmove="onTouchMove"
+  bindtouchcancel="onTouchCancel"
   bindtouchend="onTouchEnd"
 >
 
   <!--
-    ── 分栏：主办 / 协办 ───────────────────────────────────────
+    ── 分栏：主办 / 协办 / 近两周 ─────────────────────────────────
     用全局 .seg（与任务看板的阶段切换同一套），不再自制一套带阴影的分段控件 ——
-    两处做的是同一件事（在两个列表之间切换），样式必须一致。
+    两处做的是同一件事（在列表之间切换），样式必须一致。
+    ★ 「近两周」不是第三份任务列表，是时间线（谁哪天在哪件事上做了什么），
+      所以它的计数是进展条数而非任务数。
   -->
   <view class="seg person__seg">
     <view
@@ -33,9 +38,66 @@
       <text>协办</text>
       <text class="seg__count">{{joined.length + joinedDone.length}}</text>
     </view>
+    <view
+      class="seg__item {{tab === 'activity' ? 'seg__item--on' : ''}} hit"
+      data-tab="activity"
+      bindtap="onTabChange"
+    >
+      <text>近两周</text>
+      <text class="seg__count">{{activityCount}}</text>
+    </view>
   </view>
 
   <view wx:if="{{loading}}" class="loading-block">正在加载…</view>
+
+  <!-- ── 近两周动态：按周分组的时间线 ────────────────────────────── -->
+  <block wx:elif="{{tab === 'activity'}}">
+    <empty-state
+      wx:if="{{!activityGroups.length}}"
+      title="近两周没有进展记录"
+      hint="TA 上报的进展会按「本周 / 上周」显示在这里"
+    />
+
+    <!--
+      本周、上周两组永远都在：某一周没记录本身是要看的信息，
+      空组摆一句「这一周没有进展」，而不是把标题一起藏掉。
+    -->
+    <block wx:for="{{activityGroups}}" wx:for-item="group" wx:key="label">
+      <view class="section-title">
+        <text>{{group.label}}</text>
+        <text class="section-title__count">{{group.empty ? '' : group.items.length + ' 条'}}</text>
+      </view>
+
+      <view wx:if="{{group.empty}}" class="act-empty">这一周没有进展</view>
+
+      <block wx:else>
+        <view
+          wx:for="{{group.shownItems}}"
+          wx:key="_id"
+          class="card act hit"
+          data-id="{{item.taskId}}"
+          bindtap="onActivityTap"
+        >
+          <view class="row row--between">
+            <view class="row act__head">
+              <text class="act__name">{{item.taskName}}</text>
+              <text wx:if="{{item.relation}}" class="tag act__rel">{{item.relation}}</text>
+            </view>
+            <text class="act__time">{{item.whenText}}</text>
+          </view>
+          <view wx:if="{{item.desc}}" class="act__desc">{{item.desc}}</view>
+        </view>
+
+        <!-- 超过 5 条才出现；进来默认是折起的（每次进页面都重来） -->
+        <view
+          wx:if="{{group.canCollapse}}"
+          class="act-more hit"
+          data-label="{{group.label}}"
+          bindtap="onActivityToggle"
+        >{{group.collapsed ? '展开其余 ' + group.hiddenCount + ' 条 ▼' : '收起 ▲'}}</view>
+      </block>
+    </block>
+  </block>
 
   <block wx:else>
     <empty-state

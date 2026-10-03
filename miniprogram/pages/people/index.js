@@ -18,13 +18,14 @@
 const api = require('../../utils/api');
 const auth = require('../../utils/auth');
 const db = require('../../utils/db');
+const fmt = require('../../utils/format');
 const toast = require('../../utils/toast');
 const { ROLE } = require('../../shared/constants');
 
 Page({
   data: {
     loading: true,
-    /** [{ _id, name, dept, role, openid, claimed, led, joined, done, _isMe }] */
+    /** [{ _id, name, dept, role, openid, claimed, led, joined, done, open, recent, _recentText, _isMe }] */
     members: [],
     /** 汇总：未认领人数，提醒管理员处理 */
     unclaimedCount: 0,
@@ -51,11 +52,20 @@ Page({
     try {
       const session = await auth.requireClaimed();
 
-      // 两个查询并发：成员名单 + 全量任务（含未完成与已完成，计数要分开）
-      const [members, tasks] = await Promise.all([
+      // 三个查询并发：成员名单 + 全量任务（含未完成与已完成，计数要分开）
+      // + 近两周的进展记录（卡片上「近两周 N 条」小字用）
+      const [members, tasks, recent] = await Promise.all([
         db.allMembers(),
         db.allTasks(),
+        db.progressSince(fmt.twoWeekWindow().since),
       ]);
+
+      // 近两周每条进展按上报人计数 —— 与任务计数同一套路：一次遍历建映射
+      const recentStat = {};
+      recent.forEach((r) => {
+        if (!r.updaterId) return;   // 导入的老记录可能没有上报人
+        recentStat[r.updaterId] = (recentStat[r.updaterId] || 0) + 1;
+      });
 
       // 一次遍历建立 openid → 计数 的映射，避免对每个成员都扫一遍任务数组
       const stat = {};
@@ -77,6 +87,7 @@ Page({
         .map((m) => {
           const s = stat[m.openid] || { led: 0, joined: 0, done: 0 };
           const open = s.led + s.joined - s.done;
+          const recentCount = recentStat[m.openid] || 0;
           return {
             _id: m._id,
             name: m.name,
@@ -89,6 +100,10 @@ Page({
             done: s.done,
             // 未完成的任务数 —— 比"总任务数"更能反映当前负载
             open,
+            // 近两周上报的进展条数。与上面的"总量"口径不同（那是历史累计），
+            // 所以文案里带上"近两周"，并在 WXML 里单独占一行
+            recent: recentCount,
+            _recentText: recentCount ? `近两周 ${recentCount} 条进展` : '近两周无进展',
             _isMe: m.openid === session.openid,
           };
         })

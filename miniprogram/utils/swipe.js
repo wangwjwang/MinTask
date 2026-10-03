@@ -53,6 +53,33 @@ function swipeStep(start, end) {
 }
 
 /**
+ * 首动方向判定的最小位移（px）。
+ * 手指刚按下时的细微抖动不该被当成方向，8px 是一次有意的移动。
+ */
+const AXIS_MIN = 8;
+
+/**
+ * 这次触摸到目前为止，是往横向走还是往纵向走？
+ *
+ * @param {{x:number,y:number}} start touchstart 的坐标
+ * @param {{x:number,y:number}} cur   当前的坐标（触摸过程中）
+ * @returns {'x'|'y'|''} '' = 还没动够，判不出来
+ *
+ * ★ 为什么需要它：光看**终点**坐标分不清「斜着横滑」和「斜着往下滚页面」——
+ *   两者都是横向有位移、纵向也有位移，只是一个想切段、一个想翻页。
+ *   而用户的手往哪边走，起手那一下就说清楚了。
+ *   2026-10-03 实测反馈：想往下翻页，却被切到了相邻分段。
+ * ★ 判定小位移时要避免「谁大谁赢」在 0:0 时误判成 x —— 所以先问够不够 8px。
+ */
+function axisOf(start, cur) {
+  if (!start || !cur) return '';
+  const dx = Math.abs(cur.x - start.x);
+  const dy = Math.abs(cur.y - start.y);
+  if (dx < AXIS_MIN && dy < AXIS_MIN) return '';
+  return dx > dy ? 'x' : 'y';
+}
+
+/**
  * 在一张有序的分段表里走一步。
  *
  * @param {string[]} list 分段顺序表（渲染顺序即切换顺序）
@@ -73,4 +100,4 @@ function stepIn(list, current, delta) {
   return next === undefined ? null : next;
 }
 
-module.exports = { swipeStep, stepIn, MIN_DX, RATIO };
+module.exports = { swipeStep, stepIn, axisOf, MIN_DX, AXIS_MIN, RATIO };

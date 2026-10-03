@@ -96,6 +96,45 @@ function fullTime(value) {
   return `${dates.formatDate(d)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** 本周一 00:00（本地时区）。周一才是一周的开始，不是周日。 */
+function mondayOfWeek(now) {
+  const d = new Date(now === undefined ? Date.now() : now);
+  d.setHours(0, 0, 0, 0);
+  // getDay()：周日=0 … 周六=6。换算成 周一=0 … 周日=6，再往回退。
+  // ★ 用 setDate 而不是减毫秒：跨月、夏令时（部分时区）都由日期运算兜底
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+}
+
+/**
+ * 「近两周」的时间窗口。
+ *
+ * @returns {{ since: Date, thisMonday: Date }}
+ *   since      = 上周一 00:00 —— 查询下界（>= 它的记录都要）
+ *   thisMonday = 本周一 00:00 —— 分「本周 / 上周」的界线
+ *
+ * ★ 为什么是"上周一"而不是"14 天前"：
+ *   用户要看的是「上周 / 本周」，分周必须按自然的周来切；
+ *   若下界取 14 天前，星期三查询就会把上上周四~周日也捞进来，
+ *   只能靠前端再丢一次，不如一开始就按周对齐。
+ */
+function twoWeekWindow(now) {
+  const thisMonday = mondayOfWeek(now);
+  const since = new Date(thisMonday);
+  since.setDate(since.getDate() - 7);
+  return { since, thisMonday };
+}
+
+/** 时间戳 → '周三 14:20'。按周分组后，日期只差"周几、几点" */
+function weekdayTime(value) {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (isNaN(d.getTime())) return '';
+  const w = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+  const p = (n) => String(n).padStart(2, '0');
+  return `周${w} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 /** 进度条宽度（限制 0-100，防止脏数据撑破布局） */
 function progressWidth(progress) {
   const n = Number(progress);
@@ -207,6 +246,9 @@ module.exports = {
   collaboratorText,
   timeAgo,
   fullTime,
+  mondayOfWeek,
+  twoWeekWindow,
+  weekdayTime,
   progressWidth,
   idleInfo,
   decorateTask,

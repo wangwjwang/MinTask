@@ -69,11 +69,81 @@ function inSegment(task, seg) {
 /**
  * 周期排序名次：直接取 C.RECUR_FREQ 的数组下标（每周→每月→每季→每年→不适用）。
  * ★ 不在枚举里的值（有人在控制台直接改库就会出现，比如"每两周"）排到最后，
- *   但**不能让它从看板上消失** —— 同 applyFilter 里的分类兜底，一个道理。
+ *   但**不能让它从看板上消失** —— 同 viewFor 里的分类兜底，一个道理。
  */
 function recurRank(task) {
   const i = C.RECUR_FREQ.indexOf(task.recur_freq);
   return i === -1 ? C.RECUR_FREQ.length : i;
+}
+
+/**
+ * 算出「页面该长什么样」：分段计数、当前分段的内容、统计。
+ *
+ * ★ 纯函数：不碰 setData，也不读 this.data（全靠入参）。调用方必须把它的
+ *   结果与触发它的那批状态**同一次 setData** 写下去 —— 见 Page.paint。
+ * ★ 为什么不是「先 setData 状态、再在回调里重算列表」：那会留下一帧错配，
+ *   见 paint 的注释（2026-10-03 实测的那个「看板错乱」）。
+ */
+function viewFor(allTasks, segmentTab, filterCategory, collapsedMap) {
+  const filtered = filterCategory
+    ? allTasks.filter((t) => t.category === filterCategory)
+    : allTasks;
+
+  // 分段上的计数，顺序跟 SEGMENTS 走
+  const tabs = SEGMENTS.map((seg) => ({
+    seg,
+    count: filtered.filter((t) => inSegment(t, seg)).length,
+  }));
+
+  const inSeg = filtered.filter((t) => inSegment(t, segmentTab));
+
+  // ── 周期性段：平铺，按周期排序 ────────────────────────────────────
+  // ★ 名次相同时保持 allTasks 的原顺序：db.allTasks 已按 due_date 升序，
+  //   于是同一周期内天然是「截止近的在前」。Array.prototype.sort 自
+  //   ES2019 起保证稳定，小程序两端（iOS 的 JSC / Android 的 V8）都符合。
+  //   所以这里不需要（也不应该）再加一条排序键 —— 那属于发明业务规则。
+  const flat =
+    segmentTab === PERIODIC_SEG
+      ? inSeg.slice().sort((a, b) => recurRank(a) - recurRank(b))
+      : [];
+
+  // ── 阶段段：按分类分组 ────────────────────────────────────────────
+  let groups = [];
+  if (segmentTab !== PERIODIC_SEG) {
+    // 分组顺序跟 C.CATEGORY 的枚举顺序走（而不是按任务数量排序），
+    // 这样同一条任务每次渲染都落在同一位置，不会切个筛选就跳位置。
+    // 空分类不产生分组。
+    const cats = C.CATEGORY.filter((c) => inSeg.some((t) => t.category === c));
+    // ★ 兜底：万一库里有分类不在枚举内（有人直接在控制台改库就可能出现），
+    //   追加到末尾，绝不能让它从看板上悄悄消失。
+    inSeg.forEach((t) => {
+      if (cats.indexOf(t.category) === -1) cats.push(t.category);
+    });
+
+    groups = cats.map((category) => {
+      const key = segmentTab + '|' + category;
+      return {
+        key,
+        category,
+        /** 分类色由 JS 查表给出 —— WXML 不能调函数，只能内联 style */
+        color: theme.categoryColor(category),
+        tasks: inSeg.filter((t) => t.category === category),
+        // 用户没手动动过的分组用默认值：已完成默认收起，其余默认展开
+        collapsed: key in collapsedMap ? collapsedMap[key] : segmentTab === '已完成',
+      };
+    });
+  }
+
+  return {
+    tabs,
+    flat,
+    groups,
+    stats: {
+      total: filtered.length,
+      blocked: filtered.filter((t) => t._hasBlocker).length,
+      overdue: filtered.filter((t) => t._overdue).length,
+    },
+  };
 }
 
 Page({
@@ -147,15 +217,14 @@ Page({
 
       const all = fmt.decorateTasks(await db.allTasks());
 
+      const patch = { allTasks: all, loading: false };
       // ★ 只在首次落数据时挑默认分段。之后用户手动切过哪个分段就停在哪个，
       //   不能每次下拉刷新都把他弹回"进行中"。
       if (!this.segmentInitialized) {
         this.segmentInitialized = true;
-        this.setData({ segmentTab: pickInitialSegment(all) });
+        patch.segmentTab = pickInitialSegment(all);
       }
-
-      this.setData({ allTasks: all, loading: false });
-      this.applyFilter();
+      this.paint(patch);
     } catch (e) {
       console.error('[board] 拉取失败', e);
       this.setData({ loading: false });
@@ -164,71 +233,31 @@ Page({
   },
 
   /**
-   * 按分类筛选 + 算各分段计数 + 给当前分段建表 + 统计。
-   * 全在前端做，切换筛选/分段都无需再查库。
+   * 一次 setData 把「状态」和「由状态算出的视图」一起写下去。
+   * 切换分段 / 筛选 / 折叠，以及拉完数据，全都走这里 —— 全页只此一处写列表。
+   *
+   * ★ 为什么不能分两次写（先 setData 状态、再在回调里重算列表）：
+   *   两次之间会留下一帧「标签已是新分段、列表还是上一段的」错配。
+   *   2026-10-03 实测反馈的就是这一帧：切到「周期性」时，WXML 的
+   *   wx:if="{{segmentTab === '周期性' && flat.length}}" 因为 flat 还是空的
+   *   而落到了 wx:elif 上，于是「周期性」标签底下渲染出**上一段的分类分组**
+   *   （用户看到的「系统研发、系统运维」）；若上一段是「已完成」（分组默认
+   *   收起），屏幕上只剩分类标题、没有卡片，点标题只会折叠/展开 ——
+   *   用户的原话是「看板整体错乱、点也点不开」。
+   * ★ 这一帧不止一帧长：setData 的回调要等渲染完成才触发，中间隔着一次
+   *   逻辑层↔渲染层的往返，列表长的时候肉眼可见，还来得及去点一下。
+   * ★ 反过来，一次写下去就永远是自洽的 —— 这是这个方法的全部意义。
    */
-  applyFilter() {
-    const { allTasks, filterCategory, collapsedMap, segmentTab } = this.data;
-
-    const filtered = filterCategory
-      ? allTasks.filter((t) => t.category === filterCategory)
-      : allTasks;
-
-    // 分段上的计数，顺序跟 SEGMENTS 走
-    const tabs = SEGMENTS.map((seg) => ({
-      seg,
-      count: filtered.filter((t) => inSegment(t, seg)).length,
-    }));
-
-    const inSeg = filtered.filter((t) => inSegment(t, segmentTab));
-
-    // ── 周期性段：平铺，按周期排序 ────────────────────────────────────
-    // ★ 名次相同时保持 allTasks 的原顺序：db.allTasks 已按 due_date 升序，
-    //   于是同一周期内天然是「截止近的在前」。Array.prototype.sort 自
-    //   ES2019 起保证稳定，小程序两端（iOS 的 JSC / Android 的 V8）都符合。
-    //   所以这里不需要（也不应该）再加一条排序键 —— 那属于发明业务规则。
-    const flat =
-      segmentTab === PERIODIC_SEG
-        ? inSeg.slice().sort((a, b) => recurRank(a) - recurRank(b))
-        : [];
-
-    // ── 阶段段：按分类分组 ────────────────────────────────────────────
-    let groups = [];
-    if (segmentTab !== PERIODIC_SEG) {
-      // 分组顺序跟 C.CATEGORY 的枚举顺序走（而不是按任务数量排序），
-      // 这样同一条任务每次渲染都落在同一位置，不会切个筛选就跳位置。
-      // 空分类不产生分组。
-      const cats = C.CATEGORY.filter((c) => inSeg.some((t) => t.category === c));
-      // ★ 兜底：万一库里有分类不在枚举内（有人直接在控制台改库就可能出现），
-      //   追加到末尾，绝不能让它从看板上悄悄消失。
-      inSeg.forEach((t) => {
-        if (cats.indexOf(t.category) === -1) cats.push(t.category);
-      });
-
-      groups = cats.map((category) => {
-        const key = segmentTab + '|' + category;
-        return {
-          key,
-          category,
-          /** 分类色由 JS 查表给出 —— WXML 不能调函数，只能内联 style */
-          color: theme.categoryColor(category),
-          tasks: inSeg.filter((t) => t.category === category),
-          // 用户没手动动过的分组用默认值：已完成默认收起，其余默认展开
-          collapsed: key in collapsedMap ? collapsedMap[key] : segmentTab === '已完成',
-        };
-      });
-    }
-
-    this.setData({
-      tabs,
-      flat,
-      groups,
-      stats: {
-        total: filtered.length,
-        blocked: filtered.filter((t) => t._hasBlocker).length,
-        overdue: filtered.filter((t) => t._overdue).length,
-      },
-    });
+  paint(patch, cb) {
+    const s = Object.assign({}, this.data, patch);
+    this.setData(
+      Object.assign(
+        {},
+        patch,
+        viewFor(s.allTasks, s.segmentTab, s.filterCategory, s.collapsedMap)
+      ),
+      cb
+    );
   },
 
   /**
@@ -239,8 +268,7 @@ Page({
    */
   goSegment(seg) {
     if (!seg || seg === this.data.segmentTab) return;
-    this.setData({ segmentTab: seg }, () => {
-      this.applyFilter();
+    this.paint({ segmentTab: seg }, () => {
       // ★ 切段后回到页面顶部：各分段长短不一，停在上一段的滚动位置会
       //   一眼看到空白或者半截列表，像是没切成功。
       wx.pageScrollTo({ scrollTop: 0, duration: 0 });
@@ -258,13 +286,38 @@ Page({
     const t = e.touches && e.touches[0];
     // 实例属性，不进 data —— 它不参与渲染，每帧写进 data 是白费 setData
     this.swipeStart = t ? { x: t.clientX, y: t.clientY } : null;
+    this.swipeAxis = '';   // 这次手势的方向还没定
+  },
+
+  /**
+   * 横滑：定下这次手势的方向（横向 = 想切段，纵向 = 想滚页面）。
+   * ★ 只认**首动方向**，定下就锁定，后面再偏也不改判：
+   *   终点坐标分不清「斜着横滑」和「斜着往下滚」—— 起手那一下才说得清。
+   *   2026-10-03 实测：想往下翻页，却被切到了相邻分段。
+   * ★ 只读坐标、不 setData，所以触摸期间触发得再频繁也没有渲染开销。
+   */
+  onTouchMove(e) {
+    if (!this.swipeStart || this.swipeAxis) return;
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    this.swipeAxis = swipe.axisOf(this.swipeStart, { x: t.clientX, y: t.clientY });
+  },
+
+  /** 手势被系统打断（来电、侧滑返回…）→ 忘掉它，别让后面那次抬手误判 */
+  onTouchCancel() {
+    this.swipeStart = null;
+    this.swipeAxis = '';
   },
 
   /** 横滑：判断这一次滑动是不是"切到相邻分段" */
   onTouchEnd(e) {
     const start = this.swipeStart;
+    const axis = this.swipeAxis;
     this.swipeStart = null;
+    this.swipeAxis = '';
     if (!start) return;
+    // 起手是纵向、或全程没怎么动（原地点击）→ 这次是滚页面/点击，不切段
+    if (axis !== 'x') return;
     // ★ touchend 时手指已经抬起，e.touches 是空的 —— 必须用 changedTouches，
     //   写 e.touches[0] 在这里取到的是 undefined。
     const t = e.changedTouches && e.changedTouches[0];
@@ -276,7 +329,7 @@ Page({
 
   /**
    * 展开 / 收起当前分段里的某个分类。
-   * 只翻转 collapsedMap，再重跑 applyFilter 重建 groups —— 单一数据源，
+   * 只翻转 collapsedMap，再由 paint 重建 groups —— 单一数据源，
    * 避免 groups 和折叠状态两处各存一份而走岔。
    * ★ 只有阶段段有分组，周期性段走不到这里。
    */
@@ -289,12 +342,12 @@ Page({
     const cur = key in map ? map[key] : this.data.segmentTab === '已完成';
     map[key] = !cur;
 
-    this.setData({ collapsedMap: map }, () => this.applyFilter());
+    this.paint({ collapsedMap: map });
   },
 
   onFilterChange(e) {
     const idx = Number(e.detail.value);
-    this.setData({ filterCategory: this.data.categoryValues[idx] }, () => this.applyFilter());
+    this.paint({ filterCategory: this.data.categoryValues[idx] });
   },
 
   onTaskTap(e) {

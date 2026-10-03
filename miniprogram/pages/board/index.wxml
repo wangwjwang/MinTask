@@ -14,12 +14,16 @@
     ★ 链中间不能插注释（见 update 页的告示），所以说明全写在这里。
 
   ★ v2.2：支持横向滑动切换分段（左右滑 = 切到相邻分段，到头停住不循环）。
-    绑在页面根节点上，手在列表任意位置起划都算；判据在 utils/swipe.js，
-    竖着划/斜着划不截走手势，页面照常滚。
+    绑在页面根节点上，手在列表任意位置起划都算；判据在 utils/swipe.js。
+    ★ 认的是**首动方向**（touchmove 定下就锁定）：起手往纵向走的，一律当成
+      滚页面，后面横向偏得再多也不切段。只看终点的话，「斜着往下滚」会被
+      误判成横滑 —— 2026-10-03 实测就是这个毛病。
 -->
 <view
   class="page"
   bindtouchstart="onTouchStart"
+  bindtouchmove="onTouchMove"
+  bindtouchcancel="onTouchCancel"
   bindtouchend="onTouchEnd"
 >
 

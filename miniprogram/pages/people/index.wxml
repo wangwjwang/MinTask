@@ -84,6 +84,14 @@
             已完成 {{item.done}}
           </text>
         </view>
+
+        <!--
+          近两周动静。单独一行、口径与上面的负载数字不同（那几个是历史累计，
+          这个是近期活跃度），混进同一行会被当成同一维度的数字。
+        -->
+        <view class="row member__recent {{item.recent ? '' : 'member__recent--none'}}">
+          <text>{{item._recentText}}</text>
+        </view>
       </view>
 
       <text class="field__arrow">›</text>

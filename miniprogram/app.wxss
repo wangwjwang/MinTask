@@ -792,6 +792,21 @@ page {
   color: var(--tone-ok);
 }
 
+/*
+ * 近两周动静。单独占一行 —— 上面的数字是历史累计，这个是近期活跃度，
+ * 口径不同，混进同一行会被当成同一维度的数字。（同 people/index.wxml）
+ */
+.member__recent {
+  margin-top: 8rpx;
+  font-size: var(--fs-caption);
+  color: var(--text-sub);
+}
+
+/* 没动静的人弱化到底，别和"有进展"抢注意力 */
+.member__recent--none {
+  color: var(--muted);
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    可勾选的成员行 —— 报任务与改任务共用
 

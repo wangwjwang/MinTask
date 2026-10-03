@@ -11,3 +11,58 @@
 .person__seg {
   margin-bottom: var(--gap);
 }
+
+/*
+ * ── 近两周动态的条目 ─────────────────────────────────────────────────
+ * 结构沿用 .card（底、圆角、间距），这里只排内部：
+ * 第一行 [任务名 + 关系标签] …… [周几几点]，第二行是进展描述。
+ */
+.act__head {
+  min-width: 0;   /* 让长任务名能省略，而不是把右侧时间挤出去 */
+  flex: 1;
+}
+
+.act__name {
+  min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.act__rel {
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+
+.act__time {
+  margin-left: 16rpx;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.act__desc {
+  margin-top: 10rpx;
+  font-size: var(--fs-sub);
+  color: var(--text-sub);
+  line-height: 1.5;
+}
+
+/* 空的那一周：一句弱化的话，不摆卡片（没有东西可点） */
+.act-empty {
+  padding: 8rpx 0 var(--gap-sm);
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+/* 「展开其余 N 条 / 收起」——可点文字，用主色（全站只有可点链接用主色） */
+.act-more {
+  margin-bottom: var(--gap-sm);
+  padding: 20rpx 0;
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--primary);
+}

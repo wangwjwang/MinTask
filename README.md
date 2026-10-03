@@ -80,14 +80,17 @@ TeamPulse/
 │
 ├── scripts/
 │   ├── sync-shared.js           把 shared/ 分发到小程序端与各云函数
-│   ├── selfcheck.js             163 项纯逻辑断言，改 shared/ 后必跑
+│   ├── selfcheck.js             184 项纯逻辑断言，改 shared/ 后必跑
 │   ├── members.json             成员名单（★ 编辑这个）
 │   ├── make-member-import.js    转成云数据库可导入的 JSON Lines 格式
 │   ├── members.import.json      ↑ 的产物，导入控制台用这个（不提交）
 │   ├── tasks.source.csv         历史任务表（★ 可选，见 3.9）
 │   ├── make-task-import.js      转成 tasks / progress_records 两份导入文件
 │   ├── tasks.import.json        ↑ 的产物（不提交）
-│   └── progress_records.import.json  ↑ 的产物（不提交）
+│   ├── progress_records.import.json  ↑ 的产物（不提交）
+│   ├── make-collab-fix-import.js 把某人从若干任务的协办名单里摘干净（见 5.1）
+│   ├── tasks.collabfix.import.json  ↑ 的产物（不提交）
+│   └── gen-tabbar-icons.js      tabBar 图标生成（产物已入库，平时不用跑）
 │
 ├── cloudfunctions/
 │   ├── memberService/           身份认领、成员增删改（claim 用 CAS 抢占）
@@ -501,8 +504,13 @@ openid 要等本人来认领才产生，所以导入时 `leaderId` / `collaborat
 | 新增进展记录 | ✅ | ✅ | ❌ | ❌ |
 | 自由加入他人任务成为协办 | — | ✅ 无需审批 | ✅ | ✅ |
 | 标记卡壳已解决 | ✅ 任意记录 | ✅ **仅自己提交的** | ❌ | ❌ |
-| 删除任务 | ❌ | ❌ | ❌ | ✅ |
+| 删除任务 | ✅ | ❌ | ❌ | ✅ |
 | 周期模板管理 | ❌ | ❌ | ❌ | ✅ |
+
+> ★ **删除任务**的判据是 `shared/perm.js` 的 `canDeleteTask(task, openid, isAdmin)`
+> —— 主办人或管理员。管理员这一条不能省：历史导入的任务里绝大多数没有 `leaderId`
+> （本人还没认领），只允许主办的话那些任务会变成**谁都删不掉**，只能去云控制台
+> 手工删，还得连带清理进展记录。
 
 **两条硬性约束**（需求第 6.6 节、第 4 节明确要求）：
 
@@ -531,6 +539,35 @@ openid 要等本人来认领才产生，所以导入时 `leaderId` / `collaborat
 | `MEMBER_TAKEN` | 该成员已被他人认领 | 提示 + 刷新认领列表 |
 | `TASK_NOT_FOUND` | 任务已被删除 | 提示 + 刷新 |
 | `INVALID_PARAM` | 参数校验失败 | 提示具体原因 |
+
+### 5.1 协办名单：两个字段，别改混了
+
+| 字段 | 内容 | 谁在用 |
+|---|---|---|
+| `collaboratorIds` | openid 数组 | **权限判定**（能不能上报进展、能不能被移除） |
+| `collaborator` | 姓名快照（`;` 分隔） | **界面显示**（「协办」那一行） |
+
+**`collaboratorIds` 是唯一真源**，`collaborator` 只是给人看的快照，由服务端生成，
+前端写不进去。两者必须由同一次操作一起更新，否则界面就会出现"列着的人没权限、
+有权限的人不在名单里"。
+
+> ★ 历史导入的任务只有姓名、没有 openid（本人还没认领），所以 `collaborator`
+> 里会长期存在一些**在 `collaboratorIds` 里查不到的人**。这是正常的中间状态，
+> 不是数据损坏 —— 他们在本人认领后由 `relinkMemberData` 补上 openid。
+
+**改协办名单一律走云函数**，不要手工改字段。若确需离线修某条数据
+（例如要某个人从若干任务里整体退出），用：
+
+```bash
+node scripts/make-collab-fix-import.js 王佳            # 预演，只打印
+node scripts/make-collab-fix-import.js 王佳 --write    # 生成导入文件
+# 云开发控制台 → 数据库 → tasks → 导入 → tasks.collabfix.import.json
+#   冲突处理方式选**会覆盖已有记录**的那一项（选成 Insert 会原样跳过，等于没做）
+node scripts/make-collab-fix-import.js 王佳 --verify   # 重新导出后核对是否已清干净
+```
+
+它按姓名传参（openid 不进仓库），并复用服务端**同一个**合并函数重算姓名快照，
+所以离线改出来的结果和服务端将来自己收敛到的结果一致，不会"导完又变一次"。
 
 ---
 

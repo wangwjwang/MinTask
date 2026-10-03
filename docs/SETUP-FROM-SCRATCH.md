@@ -502,8 +502,8 @@ node scripts/make-member-import.js
    node scripts/selfcheck.js
    ```
 
-   163 项纯逻辑断言，不连云环境，几秒钟出结果。覆盖日期计算、权限矩阵、
-   幂等、字段白名单这些"点界面验不出来"的部分。
+   184 项纯逻辑断言，不连云环境，几秒钟出结果。覆盖日期计算、权限矩阵、
+   幂等、字段白名单、协办名单合并这些"点界面验不出来"的部分。
 
 3. **加新功能时先看 README 第 7 章**，那里写了加一个字段 / 加一个 action
    的完整步骤（要改哪几个文件、哪些地方容易漏）。
@@ -686,7 +686,7 @@ node scripts/make-member-import.js
 | 频率 | 事项 |
 |---|---|
 | 每次改完 `shared/` | `node scripts/sync-shared.js` → 重新部署云函数 |
-| 每次改完逻辑 | `node scripts/selfcheck.js`（163 项，几秒） |
+| 每次改完逻辑 | `node scripts/selfcheck.js`（184 项，几秒） |
 | 有改动想留痕时 | `git add -A && git commit -m "说明"` |
 | 新人加入后 | 让他认领 → 点一次「关联历史任务」 |
 

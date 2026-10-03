@@ -1,0 +1,37 @@
+<!-- pages/leave 退出协办 -->
+<view class="page">
+
+  <view wx:if="{{loading && !list.length}}" class="loading-block">正在加载…</view>
+
+  <block wx:else>
+    <view wx:if="{{list.length}}" class="card card--flat leave__intro">
+      <view class="t-sub">
+        以下是你参与协办的任务（含已完成）。点击「退出协办」即把自己从协办名单中移除，
+        历史进展不受影响。
+      </view>
+    </view>
+
+    <block wx:if="{{list.length}}">
+      <view wx:for="{{list}}" wx:key="_id" class="leave__item">
+        <task-card
+          task="{{item}}"
+          show-leader="{{true}}"
+          show-collaborators="{{true}}"
+        />
+        <button
+          class="btn btn--plain btn--sm leave__btn"
+          data-task="{{item}}"
+          loading="{{leavingId === item._id}}"
+          disabled="{{!!leavingId}}"
+          bindtap="onLeave"
+        >退出协办</button>
+      </view>
+    </block>
+
+    <empty-state
+      wx:else
+      title="没有你协办的任务"
+      hint="到「报任务」页的「新加入协办」里可以参与他人的任务"
+    />
+  </block>
+</view>

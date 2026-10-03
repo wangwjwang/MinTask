@@ -8,6 +8,7 @@
     "pages/progress-add/index",
     "pages/task-create/index",
     "pages/join/index",
+    "pages/leave/index",
     "pages/task-edit/index",
     "pages/task-detail/index",
     "pages/person-detail/index"

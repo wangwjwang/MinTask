@@ -26,7 +26,12 @@ const { ORIGIN, COLLECTIONS } = require('./lib/shared/constants');
 const validate = require('./lib/shared/validate');
 const perm = require('./lib/shared/perm');
 const { addIdempotent, manualTaskId } = require('./lib/shared/idempotency');
-const { buildTaskDoc, applyStageSideEffects } = require('./lib/shared/taskRepo');
+const {
+  buildTaskDoc,
+  applyStageSideEffects,
+  mergeCollaboratorSnapshot,
+  splitNames,
+} = require('./lib/shared/taskRepo');
 
 const TASKS = COLLECTIONS.TASKS;
 const MEMBERS = COLLECTIONS.MEMBERS;
@@ -52,15 +57,33 @@ async function resolveCollaborators(ctx, rawIds, leaderId) {
 /**
  * 由当前 collaboratorIds 重建 collaborator 姓名快照。
  * 加入/退出协办后调用 —— 先原子改 id 数组，再回读重建展示字符串。
+ *
+ * ★ 不能直接用 resolveNames(ids) 重建显示串
+ *   那只认已认领的 openid，会把"导入进来但本人还没认领"的协办人**静默抹掉**
+ *   —— 他们的姓名在库里是唯一的存在形式，抹了再也回不来。
+ *   合并规则与理由详见 shared/taskRepo.js 的 mergeCollaboratorSnapshot。
+ *
+ * ★ 所以这里要多查一次 members
+ *   需要 claimed（库里"有 openid"的姓名）来区分「未认领，所以查不到 openid」
+ *   和「已被移除，所以查不到 openid」：前者要留，后者要删。
+ *   只按 ids 反查的话这两者长得一模一样 —— 写松了移除协办人删不掉，
+ *   写紧了未认领的人被抹掉。join/leave 是低频操作，多一次查询换正确性划算。
  */
 async function rebuildCollaboratorSnapshot(ctx, taskId) {
   const cur = await ctx.db.collection(TASKS).doc(taskId).get();
-  const ids = (cur.data && cur.data.collaboratorIds) || [];
-  const names = await ctx.resolveNames(ids);
+  const doc = (cur && cur.data) || {};
+  const ids = doc.collaboratorIds || [];
+
+  const linked = await ctx.resolveNames(ids);
+
+  const members = await ctx.findMembersByNames(splitNames(doc.collaborator));
+  const claimed = members.filter((m) => m.openid).map((m) => m.name);
+
+  const collaborator = mergeCollaboratorSnapshot(doc.collaborator, linked, claimed);
   await ctx.db.collection(TASKS).doc(taskId).update({
-    data: { collaborator: names.join(';'), updatedAt: ctx.db.serverDate() },
+    data: { collaborator, updatedAt: ctx.db.serverDate() },
   });
-  return { collaboratorIds: ids, collaborator: names.join(';') };
+  return { collaboratorIds: ids, collaborator };
 }
 
 // ---------------------------------------------------------------------------

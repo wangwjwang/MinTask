@@ -241,6 +241,63 @@ function splitNames(s) {
     .filter(Boolean);
 }
 
+/**
+ * 合并协办人姓名快照 —— join / leave / removeCollaborator 后重建显示串。
+ *
+ * ★ 为什么不能直接 «resolveNames(collaboratorIds).join(';')»
+ *   那正是这里曾经的做法，它会**静默销毁数据**。
+ *   resolveNames 只认已认领的 openid；而历史导入的协办人只有姓名、没有 openid
+ *   （本人还没来认领），ids 数组里从来没有他们。于是一旦有人加入或退出，
+ *   这些人就从"协办"那行里消失了 —— 而 ids 里本来就没有他们，抹掉后再也回不来。
+ *   实测影响过 17/61 条任务。
+ *
+ *   它同时是"我明明不是协办却能上报进展"这个反馈的根因：权限判定读
+ *   collaboratorIds，界面显示读 collaborator，两边说的不是同一拨人。
+ *
+ * ★ 判据
+ *   旧串里的姓名，只要**库里查不到一个同名且有 openid 的成员**，就说明它从未
+ *   被关联过（导入遗留 / 预置但未认领），必须原样保留；反之说明这人已经是
+ *   系统用户，去留在 ids 里说了算 —— 不能因为"名字还在旧串里"就赖着不走。
+ *
+ * ★ 所以调用方必须传 claimedNames
+ *   只传 ids 反查出的姓名是不够的：那样无法区分"未认领所以查不到"和
+ *   "已被移除所以查不到"，两者会一视同仁地留下来，被移除的人就删不掉了。
+ *
+ * ★ 顺序
+ *   旧串顺序优先，新关联上的追加在末尾。这样 join 只是把人加到后面，
+ *   不会把整份名单重排一遍；也让重复执行的结果稳定（幂等）。
+ *
+ * ★ 附带效果：主办人不会留在协办串里
+ *   主办人从不进 collaboratorIds（relinkMemberData 跳过、join 直接拒绝），
+ *   所以历史脏数据里若把主办人也写进了协办串，重建时会按"已认领但不在 ids 里"
+ *   去掉。这与旧实现一致（旧实现按 ids 反查，本来就产出不了主办人的姓名），
+ *   且主办人在「主办」那行仍有显示，信息没丢。未认领的主办人则会被保留 ——
+ *   它和"导入遗留下来的人"在数据上无法区分。
+ *
+ * @param {string}   oldSnapshot  现有的 collaborator 显示串
+ * @param {string[]} linkedNames  由 collaboratorIds 反查出的姓名（已认领的协办人）
+ * @param {Iterable<string>} claimedNames 库中「有 openid」的成员姓名；可传数组或 Set
+ * @returns {string} 分号分隔的新显示串
+ */
+function mergeCollaboratorSnapshot(oldSnapshot, linkedNames, claimedNames) {
+  const linked = [...new Set((linkedNames || []).filter(Boolean))];
+  const linkedSet = new Set(linked);
+  const claimed = new Set(claimedNames || []);
+  const out = [];
+  const push = (n) => {
+    if (!out.includes(n)) out.push(n);
+  };
+
+  for (const n of splitNames(oldSnapshot)) {
+    if (linkedSet.has(n)) push(n); // 仍然关联着
+    else if (!claimed.has(n)) push(n); // 从未关联上 —— 保留
+    // 剩下那种「已认领、但已不在 ids 里」= 真的退出了或被移除了，丢掉
+  }
+  linked.forEach(push); // 新关联上的追加在末尾
+
+  return out.join(';');
+}
+
 /** 分页取全量。云函数端单次上限 100，不循环会被静默截断。 */
 async function fetchAll(db, collectionName) {
   const out = [];
@@ -351,5 +408,7 @@ module.exports = {
   applyStageSideEffects,
   buildTaskDoc,
   buildProgressDoc,
+  mergeCollaboratorSnapshot,
+  splitNames,
   relinkMemberData,
 };

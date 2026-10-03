@@ -510,9 +510,10 @@ git commit -m "feat: 新增退出协办页 pages/leave
     <view class="card card--flat entry-card hit" bindtap="onJoinTap">
 ```
 
-`miniprogram/pages/report/index.wxss`，删掉 `:35-46` 这两条规则（`.join-entry` 与
-`.join-entry .field__arrow`）及其上方注释，整个文件只剩开头的 `/* pages/report */`
-一行。
+`miniprogram/pages/report/index.wxss`，删掉第 35-46 行（`.join-entry` 与
+`.join-entry .field__arrow` 两条规则 + 它们上方那段「★ 40rpx 不是字号」的注释）。
+**只删这些** —— 该文件里还有 `.report__sticky`（吸顶分组标题，本页核心机制）
+与 `.report__note` 两条活规则，必须保留。
 
 - [ ] **Step 3: 改任务页加入口卡**
 

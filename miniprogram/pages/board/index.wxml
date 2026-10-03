@@ -1,8 +1,17 @@
 <!--
   pages/board Tab3 任务看板
 
-  ★ v2 结构：统计胶囊 → 分类筛选 → 阶段分段切换 → 单一纵向列表。
+  ★ v2 结构：统计胶囊 → 分类筛选 → 分段切换 → 单一纵向列表。
     取代了原来「三列横向滚动 + 列内纵向滚动」的嵌套滚动。
+
+  ★ v2.1：分段换成 周期性 / 进行中 / 已完成，「未开始」不再成段。
+    两个分段两套渲染：
+      · 周期性段 —— 平铺，按周期（每周→每月→每季→每年）排开，不分组；
+      · 阶段段   —— 按任务分类分组，每组可折叠。
+    ★ 内容区那条 wx:if 链的第一条必须带上 flat.length：只判 segmentTab 的话，
+      周期性段为空时会渲染一个空视图，后面的 wx:elif / wx:else 永远轮不到，
+      「这一段下没有任务」就永远出不来。
+    ★ 链中间不能插注释（见 update 页的告示），所以说明全写在这里。
 -->
 <view class="page">
 
@@ -28,19 +37,21 @@
   </picker>
 
   <!--
-    ── 阶段分段切换 ──────────────────────────────────────────────
+    ── 分段切换 ──────────────────────────────────────────────────
     取自参考图 IKEA 顶部「Rooms │ Products」页签：下划线指示当前项。
-    每段带计数 —— 一次只显示一个阶段，靠计数保住"看板全貌"。
+    每段带计数 —— 一次只显示一段，靠计数保住"看板全貌"。
+    ★ 三段计数之和会大于顶部「共 N 项」：周期任务同时算在它所属的
+      阶段段里，分段不是一组互斥的阶段。见 index.js 文件头。
   -->
   <view class="seg board__seg">
     <view
       wx:for="{{tabs}}"
-      wx:key="stage"
-      class="seg__item {{stageTab === item.stage ? 'seg__item--on' : ''}} hit"
-      data-stage="{{item.stage}}"
-      bindtap="onStageTap"
+      wx:key="seg"
+      class="seg__item {{segmentTab === item.seg ? 'seg__item--on' : ''}} hit"
+      data-segment="{{item.seg}}"
+      bindtap="onSegmentTap"
     >
-      <text>{{item.stage}}</text>
+      <text>{{item.seg}}</text>
       <text class="seg__count">{{item.count}}</text>
     </view>
   </view>
@@ -48,8 +59,19 @@
   <view wx:if="{{loading}}" class="loading-block">正在加载看板…</view>
 
   <block wx:else>
-    <block wx:if="{{groups.length}}">
-      <!-- 当前阶段内按任务分类分组，每组可点标题折叠 -->
+    <view wx:if="{{segmentTab === '周期性' && flat.length}}">
+      <!-- 周期性段：平铺，顺序即周期顺序（index.js 里已排好） -->
+      <task-card
+        wx:for="{{flat}}"
+        wx:for-item="task"
+        wx:key="_id"
+        task="{{task}}"
+        bind:tap="onTaskTap"
+      />
+    </view>
+
+    <block wx:elif="{{groups.length}}">
+      <!-- 当前分段内按任务分类分组，每组可点标题折叠 -->
       <view
         wx:for="{{groups}}"
         wx:for-item="group"
@@ -84,8 +106,8 @@
 
     <empty-state
       wx:else
-      title="这个阶段下没有任务"
-      hint="上方可以切换阶段，或换一个分类看看"
+      title="这一段下没有任务"
+      hint="上方可以切换分段，或换一个分类看看"
     />
   </block>
 </view>

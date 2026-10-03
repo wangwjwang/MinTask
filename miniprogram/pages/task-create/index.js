@@ -87,7 +87,15 @@ Page({
       const isAdmin = !!(session.member && session.member.role === '管理员');
 
       const res = await api.memberApi.listMembers();
-      const claimed = (res.list || []).filter((m) => m.openid);
+      /*
+       * 只保留「能写」的已认领成员。
+       * ★ 管理者是只读角色，不该被选成主办/协办 —— 选进去了 TA 也报不了进展，
+       *   任务会卡在一个不会动的人手里。云函数侧同样会拒（ctx.assertAssignable），
+       *   这里过滤是为了别让人白填一屏才被弹回来。
+       */
+      const claimed = (res.list || []).filter(
+        (m) => m.openid && m.role !== C.ROLE.VIEWER
+      );
 
       this.setData({
         leaderId: session.openid,

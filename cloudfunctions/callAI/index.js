@@ -64,7 +64,7 @@ const SYSTEM_PROMPT = `你是团队任务管理系统的进展记录整理助手
  */
 async function refine(payload, ctx) {
   // 仅已认领成员可调用（AI 额度不该被未登录请求消耗）
-  await ctx.requireMember();
+  await ctx.requireWriter();
 
   const raw = String((payload && payload.text) || '').trim();
 

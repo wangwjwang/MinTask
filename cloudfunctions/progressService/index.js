@@ -56,7 +56,7 @@ const TEXT_MAX = { description: 2000, blocker: 500, needSupport: 500 };
  *   clientToken  幂等令牌
  */
 async function addRecord(payload, ctx) {
-  const me = await ctx.requireMember();
+  const me = await ctx.requireWriter();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
   const task = await ctx.getTaskOrThrow(taskId);
   await ctx.requireParticipantOf(task);
@@ -154,7 +154,7 @@ async function addRecord(payload, ctx) {
  * 权限：任务主办人，或该条进展的提交人本人。
  */
 async function resolveBlocker(payload, ctx) {
-  await ctx.requireMember();
+  await ctx.requireWriter();
   const recordId = validate.assertNonEmptyString(payload.recordId, '进展记录');
 
   const recRes = await ctx.db.collection(RECORDS).doc(recordId).get().catch(() => null);

@@ -1,5 +1,5 @@
 <!-- pages/people Tab4 人员看板 -->
-<view class="page">
+<view class="page page--tabbar">
 
   <view wx:if="{{loading}}" class="loading-block">正在加载人员…</view>
 

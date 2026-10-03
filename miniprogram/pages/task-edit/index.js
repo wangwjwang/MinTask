@@ -144,7 +144,15 @@ Page({
       }
 
       const res = await api.memberApi.listMembers();
-      const claimed = (res.list || []).filter((m) => m.openid && m.openid !== task.leaderId);
+      /*
+       * 只保留「能写」的已认领成员，并且排除主办人自己。
+       * ★ 管理者是只读角色，不该被选成协办 —— 选进去了 TA 也报不了进展。
+       *   云函数侧同样会拒（ctx.assertAssignable），这里过滤只是为了
+       *   别让人白填一屏才被弹回来。
+       */
+      const claimed = (res.list || []).filter(
+        (m) => m.openid && m.openid !== task.leaderId && m.role !== C.ROLE.VIEWER
+      );
 
       const form = {
         task_name: task.task_name || '',

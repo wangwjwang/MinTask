@@ -11,6 +11,7 @@
  */
 
 const api = require('./api');
+const { ROLE } = require('../shared/constants');
 
 /**
  * 云开发环境是否已就绪，由 app.js 在 onLaunch 里通过 setCloudReady() 设置。
@@ -128,6 +129,19 @@ function isAdmin() {
   return !!(m && m.role === '管理员');
 }
 
+/**
+ * 是否只读角色「管理者」——不参与报任务 / 改任务，只有两个看板的查看权。
+ *
+ * ★ 和 isAdmin 是两回事，别合并成一个「有没有权限」的布尔量：
+ *   管理员什么都能干，管理者什么都不能写。
+ * ★ 这里只用来把入口变灰 / 藏掉，**不是安全边界** ——
+ *   真正的闸门在云函数 shared/ctx.js 的 requireWriter()。
+ */
+function isViewer() {
+  const m = currentMember();
+  return !!(m && m.role === ROLE.VIEWER);
+}
+
 module.exports = {
   bootstrap,
   setCloudReady,
@@ -138,4 +152,5 @@ module.exports = {
   currentOpenid,
   currentMember,
   isAdmin,
+  isViewer,
 };

@@ -1,5 +1,5 @@
 <!-- pages/update Tab2 改任务 -->
-<view class="page">
+<view class="page page--tabbar">
 
   <!--
     ── 信息块 ─────────────────────────────────────────────────────

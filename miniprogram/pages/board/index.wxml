@@ -20,7 +20,7 @@
       误判成横滑 —— 2026-10-03 实测就是这个毛病。
 -->
 <view
-  class="page"
+  class="page page--tabbar"
   bindtouchstart="onTouchStart"
   bindtouchmove="onTouchMove"
   bindtouchcancel="onTouchCancel"

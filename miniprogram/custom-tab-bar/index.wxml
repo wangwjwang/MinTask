@@ -1,0 +1,22 @@
+<!--
+  自定义 tabBar。
+  ★ 外观照着原来原生 tabBar 的样子做（同样的图标、同样的灰/蓝、同样的高度），
+    换自定义只是因为原生做不到"按角色把某一项变灰"（见 index.js 头部）。
+  ★ 置灰用整项的透明度，图标与文字同时变淡 —— 只淡文字会像"这一栏没选中"。
+-->
+<view class="tabbar">
+  <view
+    wx:for="{{tabs}}"
+    wx:key="pagePath"
+    class="tabbar__item {{selected === index ? 'tabbar__item--on' : ''}} {{item.disabled ? 'tabbar__item--off' : ''}}"
+    data-index="{{index}}"
+    bindtap="onTap"
+  >
+    <image
+      class="tabbar__icon"
+      src="/images/tabbar/{{item.icon}}{{selected === index ? '-on' : ''}}.png"
+      mode="aspectFit"
+    />
+    <text class="tabbar__text">{{item.text}}</text>
+  </view>
+</view>

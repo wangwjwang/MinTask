@@ -28,6 +28,21 @@ const { relinkMemberData } = require('./lib/shared/taskRepo');
 /** 姓名最大长度，防止误粘贴超长文本 */
 const NAME_MAX = 20;
 
+/** 可被指派给成员的角色白名单。其余取值一律落回「普通」。 */
+const ROLES = [ROLE.NORMAL, ROLE.ADMIN, ROLE.VIEWER];
+
+/**
+ * 规整角色取值。
+ *
+ * ★ 必须是白名单：这里是把外部输入写进 members.role，而 role 直接决定
+ *   权限。写进一个没见过的字符串，后续权限判断全都会落空。
+ * ★ 每加一个新角色都要记得加进 ROLES —— 漏加的表现是"设了没生效、
+ *   静默变成普通"，所以宁可只认列出来的这几个。
+ */
+function pickRole(v) {
+  return ROLES.indexOf(v) !== -1 ? v : ROLE.NORMAL;
+}
+
 // ---------------------------------------------------------------------------
 // 普通成员可用
 // ---------------------------------------------------------------------------
@@ -201,7 +216,7 @@ async function adminAddMember(payload, ctx) {
   await ctx.requireAdmin();
   const name = assertNonEmptyString(payload.name, '姓名', NAME_MAX);
   const dept = String(payload.dept || '').slice(0, 30);
-  const role = payload.role === ROLE.ADMIN ? ROLE.ADMIN : ROLE.NORMAL;
+  const role = pickRole(payload.role);
 
   // 姓名唯一性由索引兜底，这里先查一次给出友好提示
   const dup = await ctx.db.collection('members').where({ name }).count();
@@ -245,7 +260,7 @@ async function adminBatchAddMembers(payload, ctx) {
       data: {
         name,
         dept: String((item && item.dept) || '').slice(0, 30),
-        role: item && item.role === ROLE.ADMIN ? ROLE.ADMIN : ROLE.NORMAL,
+        role: pickRole(item && item.role),
         openid: '',
         claimedAt: null,
         createdAt: ctx.db.serverDate(),
@@ -280,7 +295,7 @@ async function adminUpdateMember(payload, ctx) {
   }
   if (payload.dept !== undefined) data.dept = String(payload.dept || '').slice(0, 30);
   if (payload.role !== undefined) {
-    data.role = payload.role === ROLE.ADMIN ? ROLE.ADMIN : ROLE.NORMAL;
+    data.role = pickRole(payload.role);
   }
 
   if (!Object.keys(data).length) throw new BizError(Codes.INVALID_PARAM, '没有需要更新的字段');

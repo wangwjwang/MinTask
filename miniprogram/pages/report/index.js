@@ -149,7 +149,29 @@ Page({
     api.setClaimHandler(() => auth.gotoClaim(true));
   },
 
+  /**
+   * 把选中态告诉自定义 tabBar（app.json 里 tabBar.custom = true）。
+   * ★ getTabBar() 在极早期可能还没有组件实例，所以要判空 ——
+   *   漏了会在启动瞬间抛错，而页面本身是好的，那种错很难查。
+   */
+  syncTabBar(index) {
+    const bar = this.getTabBar && this.getTabBar();
+    if (bar && bar.sync) bar.sync(index);
+  },
+
   onShow() {
+    /*
+     * ★ 管理者（只读角色）没有报任务的权限，直接送去任务看板。
+     *   他的 tab 是灰的，点不进来 —— 但冷启动、reLaunch、以及从
+     *   认领页回来时都可能落到这一页，所以这道门必须自己守着。
+     */
+    if (auth.isViewer()) {
+      wx.switchTab({ url: '/pages/board/index' });
+      return;
+    }
+
+    this.syncTabBar(0);
+
     /*
      * ★ 每次进入本页都让提醒区回到折起状态。
      *   展开是「我现在要顺着这几条报一遍」的**临时**状态，不该跨页面残留 ——
@@ -175,6 +197,10 @@ Page({
     } catch (e) {
       return;
     }
+
+    // 身份到手后再同步一次 tabBar：onShow 那一刻 bootstrap 可能还没回来，
+    // 角色读不到就会把两个只读页签画成可点的
+    this.syncTabBar(0);
 
     this.setData({
       myOpenid: session.openid,

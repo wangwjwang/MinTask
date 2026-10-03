@@ -45,6 +45,7 @@ const DEPT_MAX = 30;
 
 const ROLE_ADMIN = '管理员';
 const ROLE_NORMAL = '普通';
+const ROLE_VIEWER = '管理者';
 
 // ---------------------------------------------------------------------------
 // 读取
@@ -143,9 +144,14 @@ function normalize(list) {
       dept = dept.slice(0, DEPT_MAX);
     }
 
+    // ★ 这里是白名单，与云函数 ctx.requireWriter() 的黑名单方向相反，且**不能统一**：
+    //   requireWriter 拦的是"能不能写"，多认一个只读角色只是漏拦；
+    //   而这里决定的是"往库里写什么角色值"，认错一个就写进去了 ——
+    //   把「管理者」按「普通」导入，等于给一个本该只读的人开了写权限，
+    //   还是静默的。所以新角色必须显式加进来。
     let role = ROLE_NORMAL;
     if (item.role !== undefined && item.role !== '') {
-      if (item.role === ROLE_ADMIN || item.role === ROLE_NORMAL) {
+      if (item.role === ROLE_ADMIN || item.role === ROLE_NORMAL || item.role === ROLE_VIEWER) {
         role = item.role;
       } else {
         warn.push(`${at}「${name}」的 role「${item.role}」无法识别，已按「${ROLE_NORMAL}」处理`);

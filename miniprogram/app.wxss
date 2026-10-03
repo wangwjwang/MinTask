@@ -110,6 +110,22 @@ page {
   padding-bottom: 200rpx;
 }
 
+/*
+ * Tab 页专用：让出底部自定义 tabBar 的高度。
+ * ★ 原生 tabBar 会自动把页面顶上去，换成 custom 之后**不会**了 ——
+ *   这一块必须由页面自己留，否则列表最后一条永久被挡在 tabBar 底下，
+ *   而且滚到底也露不出来（页面已经到底了）。
+ * ★ 高度与 custom-tab-bar/index.wxss 的 .tabbar 是一对，改要一起改。
+ */
+.page--tabbar {
+  padding-bottom: calc(128rpx + env(safe-area-inset-bottom));
+}
+
+/* 既有固定操作栏、又是 Tab 页（只有「报任务」）：两层让位要叠加 */
+.page--with-footer.page--tabbar {
+  padding-bottom: calc(310rpx + env(safe-area-inset-bottom));
+}
+
 /* 卡片：靠底色对比从背景里浮起来，**不用阴影** */
 .card {
   background: var(--card);
@@ -300,6 +316,16 @@ page {
   background: var(--card);
   border-top: 2rpx solid var(--border);
   z-index: 10;
+}
+
+/*
+ * 操作栏落在 Tab 页里时（只有「报任务」）：抬到自定义 tabBar 之上。
+ * ★ z-index 不用动 —— tabBar 是 100，本来就压在操作栏上面；
+ *   但那样操作栏会**被 tabBar 盖住一截**，看起来像按钮被削了一半。
+ *   所以要把它的 bottom 抬起来，而不是靠层级去抢。
+ */
+.footer-bar--tabbar {
+  bottom: calc(100rpx + env(safe-area-inset-bottom));
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

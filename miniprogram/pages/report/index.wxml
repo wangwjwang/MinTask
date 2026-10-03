@@ -1,5 +1,5 @@
 <!-- pages/report Tab1 报任务 -->
-<view class="page page--with-footer">
+<view class="page page--with-footer page--tabbar">
 
   <view wx:if="{{loading}}" class="loading-block">正在加载任务…</view>
 
@@ -170,7 +170,11 @@
   </block>
 </view>
 
-<!-- ── 区块 5：新建任务（页面最底部固定按钮）────────────────────── -->
-<view class="footer-bar">
+<!--
+  ── 区块 5：新建任务（页面最底部固定按钮）──────────────────────
+  footer-bar--tabbar：本页是 Tab 页，按钮栏要抬到自定义 tabBar 之上，
+  否则会被 tabBar 盖掉一截。
+-->
+<view class="footer-bar footer-bar--tabbar">
   <button class="btn btn--primary" bindtap="onCreateTap">＋ 新建任务</button>
 </view>

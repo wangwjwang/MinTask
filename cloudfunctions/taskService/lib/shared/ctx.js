@@ -16,7 +16,7 @@
 
 const cloud = require('wx-server-sdk');
 const { BizError, Codes, describeInfraError } = require('./errors');
-const { QUERY_BATCH } = require('./constants');
+const { QUERY_BATCH, ROLE } = require('./constants');
 const perm = require('./perm');
 
 // 云函数 SDK 初始化。放在模块加载期执行，保证任何 import 了本文件的
@@ -126,6 +126,23 @@ function buildCtx(event) {
       return m;
     },
 
+    /**
+     * 要求「可写」身份 —— 除只读角色「管理者」外的所有已认领成员。
+     * 所有写业务数据的入口（建任务/改任务/加入退出协办/上报进展/标记卡壳…）
+     * 的第一步都应该是它，而不是 requireMember。
+     *
+     * ★ 只拦 VIEWER，不搞白名单：库里现存成员的角色字符串并不统一
+     *   （有 '普通'、也有历史遗留写法），白名单会把它们全判成没权限。
+     *   新增角色默认是「能写」，要收紧得显式加进来 —— 这是有意的选择：
+     *   漏拦一个新加的只读角色会退化成"能写"，而误拦会把普通同事挡在门外，
+     *   后者对 10 个人的日常使用来说代价大得多。
+     */
+    async requireWriter() {
+      const m = await ctx.requireMember();
+      if (m.role === ROLE.VIEWER) throw new BizError(Codes.FORBIDDEN_VIEWER);
+      return m;
+    },
+
     /** 读取任务，不存在则抛 TASK_NOT_FOUND */
     async getTaskOrThrow(taskId) {
       if (!taskId) throw new BizError(Codes.INVALID_PARAM, '缺少任务 ID');
@@ -163,10 +180,12 @@ function buildCtx(event) {
     },
 
     /**
-     * 由 openid 数组解析出姓名数组（分批查询，规避 100 条上限）。
+     * 由 openid 数组解析出成员档案（分批查询，规避 100 条上限）。
      * 返回顺序与入参一致，找不到的 id 被跳过。
+     * ★ 投影里必须带 role —— 判断"这个人能不能被指派任务"要看角色，
+     *   少取一列会让上层拿到 undefined，看起来就像"普通成员"，闸门形同虚设。
      */
-    async resolveNames(ids) {
+    async resolveMembers(ids) {
       const uniq = [...new Set((ids || []).filter(Boolean))];
       if (!uniq.length) return [];
       const map = {};
@@ -176,13 +195,42 @@ function buildCtx(event) {
           db
             .collection('members')
             .where({ openid: _.in(batch) })
-            .field({ openid: true, name: true })
+            .field({ openid: true, name: true, role: true })
             .limit(QUERY_BATCH)
             .get()
         );
-        for (const m of r.data || []) map[m.openid] = m.name;
+        for (const m of r.data || []) map[m.openid] = m;
       }
       return uniq.map((id) => map[id]).filter(Boolean);
+    },
+
+    /**
+     * 由 openid 数组解析出姓名数组。返回顺序与入参一致，找不到的 id 被跳过。
+     */
+    async resolveNames(ids) {
+      const list = await ctx.resolveMembers(ids);
+      return list.map((m) => m.name);
+    },
+
+    /**
+     * 拒绝把只读角色（管理者）放进任务的协作名单。
+     *
+     * ★ 为什么在服务端也要拦：前端把人从选择器里过滤掉只是体验，
+     *   直接调云函数照样能把管理者写成主办/协办。而一旦写进去，
+     *   TA 的名字会进任务快照，还会被算进"协办的任务"里 ——
+     *   那就等于把一个只读账号拉进了报任务/改任务。
+     *
+     * @param {Array}  members ctx.resolveMembers 的结果
+     * @param {string} what    '主办人' / '协办人'，用于提示文案
+     */
+    assertAssignable(members, what) {
+      const v = (members || []).find((m) => m.role === ROLE.VIEWER);
+      if (v) {
+        throw new BizError(
+          Codes.FORBIDDEN_VIEWER,
+          `「${v.name}」是管理者（只有查看权限），不能作为${what}`
+        );
+      }
     },
 
     /**

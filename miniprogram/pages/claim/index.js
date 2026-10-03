@@ -4,8 +4,11 @@
  * 放在 app.json 的 pages 首位，因此是小程序的启动页。
  *
  * 两条分支：
- *   已认领 → 直接 switchTab 进 Tab1「报任务」，用户几乎无感
+ *   已认领 → 直接 switchTab 进主页面，用户几乎无感
  *   未认领 → 展示未认领名单，用户选自己的名字完成绑定
+ *
+ * ★ 落点按角色分（见 homeUrl）：普通成员与管理员去「报任务」，
+ *   只读的「管理者」去「任务看板」—— TA 没有报任务/改任务的权限。
  *
  * ★ 为什么用 reLaunch/switchTab 而不是把 Tab1 设为首页：
  *   用户可能从分享卡片直接进入任意子页面，那条路径绕过了启动页。
@@ -16,6 +19,16 @@
 
 const api = require('../../utils/api');
 const auth = require('../../utils/auth');
+
+/**
+ * 认领完成（或已认领）之后进哪一页。
+ * ★ 管理者是只读角色，报任务/改任务对他没有意义，直接落到任务看板。
+ *   那两个 tab 对他是灰的，落过去也会被页面守门弹回来 ——
+ *   与其让他看见一次闪跳，不如一开始就去对的地方。
+ */
+function homeUrl() {
+  return auth.isViewer() ? '/pages/board/index' : '/pages/report/index';
+}
 const toast = require('../../utils/toast');
 
 Page({
@@ -48,7 +61,7 @@ Page({
 
       if (session.member) {
         // 已认领，直接进入主页面
-        wx.switchTab({ url: '/pages/report/index' });
+        wx.switchTab({ url: homeUrl() });
         return;
       }
 
@@ -106,7 +119,7 @@ Page({
       // 认领成功必须刷新身份缓存，否则全局还认为"未认领"
       await auth.refresh();
       setTimeout(() => {
-        wx.switchTab({ url: '/pages/report/index' });
+        wx.switchTab({ url: homeUrl() });
       }, 800);
     } catch (e) {
       this.setData({ submitting: false });

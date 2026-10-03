@@ -28,6 +28,8 @@ const Codes = {
   FORBIDDEN_NOT_PARTICIPANT: 'FORBIDDEN_NOT_PARTICIPANT',
   /** 非管理员 */
   FORBIDDEN_ADMIN: 'FORBIDDEN_ADMIN',
+  /** 只读角色（管理者）尝试执行写操作 */
+  FORBIDDEN_VIEWER: 'FORBIDDEN_VIEWER',
   /** 协办人尝试提交 progress/status/stage 等主办人专属字段 */
   FORBIDDEN_FIELD: 'FORBIDDEN_FIELD',
   /** 任务不存在 */
@@ -52,6 +54,7 @@ const MESSAGES = {
   [Codes.FORBIDDEN_NOT_LEADER]: '仅主办人可执行此操作',
   [Codes.FORBIDDEN_NOT_PARTICIPANT]: '仅主办人或协办人可执行此操作',
   [Codes.FORBIDDEN_ADMIN]: '仅管理员可执行此操作',
+  [Codes.FORBIDDEN_VIEWER]: '管理者账号只有查看权限',
   [Codes.FORBIDDEN_FIELD]: '协办人无权修改进度与状态',
   [Codes.TASK_NOT_FOUND]: '任务不存在或已被删除',
   [Codes.RECORD_NOT_FOUND]: '进展记录不存在',

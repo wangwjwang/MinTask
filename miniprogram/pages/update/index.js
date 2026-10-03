@@ -53,7 +53,20 @@ Page({
     api.setClaimHandler(() => auth.gotoClaim(true));
   },
 
+  /** 把选中态告诉自定义 tabBar（见 report/index.js 的同名方法） */
+  syncTabBar(index) {
+    const bar = this.getTabBar && this.getTabBar();
+    if (bar && bar.sync) bar.sync(index);
+  },
+
   onShow() {
+    // 管理者（只读角色）不参与改任务，送去任务看板（同 report/index.js）
+    if (auth.isViewer()) {
+      wx.switchTab({ url: '/pages/board/index' });
+      return;
+    }
+
+    this.syncTabBar(1);
     this.refresh();
   },
 
@@ -68,6 +81,9 @@ Page({
     } catch (e) {
       return;
     }
+
+    // 身份到手后再同步一次：onShow 那刻 bootstrap 可能还没回来
+    this.syncTabBar(1);
 
     try {
       if (!this.data.tasks.length) this.setData({ loading: true });

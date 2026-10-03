@@ -62,15 +62,19 @@ async function create(payload, ctx) {
   }
 
   // 解析主办人姓名快照
-  const ownerNames = await ctx.resolveNames([ownerId]);
-  if (!ownerNames.length) throw new BizError(Codes.MEMBER_NOT_FOUND, '主办人不存在或尚未认领该成员');
+  const ownerMembers = await ctx.resolveMembers([ownerId]);
+  if (!ownerMembers.length) throw new BizError(Codes.MEMBER_NOT_FOUND, '主办人不存在或尚未认领该成员');
+  // 管理者是只读角色，不能被写成周期任务的主办/协办（前端已过滤，这里是不绕过的底线）
+  ctx.assertAssignable(ownerMembers, '主办人');
 
   // 解析协办人
   const collaboratorIds = validate.normalizeIds(payload.collaboratorIds, ownerId);
-  const collaboratorNames = await ctx.resolveNames(collaboratorIds);
-  if (collaboratorNames.length !== collaboratorIds.length) {
+  const collaboratorMembers = await ctx.resolveMembers(collaboratorIds);
+  if (collaboratorMembers.length !== collaboratorIds.length) {
     throw new BizError(Codes.INVALID_PARAM, '协办人中包含不存在的成员');
   }
+  ctx.assertAssignable(collaboratorMembers, '协办人');
+  const collaboratorNames = collaboratorMembers.map((m) => m.name);
 
   const deadlineRule = String(payload.deadlineRule || '当月末').slice(0, 60);
 
@@ -88,7 +92,7 @@ async function create(payload, ctx) {
     triggerDate: String(payload.triggerDate || '每月 1 日').slice(0, 40),
     taskNameTemplate,
     ownerId,
-    ownerName: ownerNames[0],
+    ownerName: ownerMembers[0].name,
     collaboratorIds,
     collaboratorNames,
     deadlineRule,
@@ -138,20 +142,22 @@ async function update(payload, ctx) {
   // 主办人变更需重新解析姓名快照
   if (patch.ownerId !== undefined) {
     const ownerId = validate.assertNonEmptyString(patch.ownerId, '主办人');
-    const names = await ctx.resolveNames([ownerId]);
-    if (!names.length) throw new BizError(Codes.MEMBER_NOT_FOUND, '主办人不存在');
+    const owners = await ctx.resolveMembers([ownerId]);
+    if (!owners.length) throw new BizError(Codes.MEMBER_NOT_FOUND, '主办人不存在');
+    ctx.assertAssignable(owners, '主办人');
     data.ownerId = ownerId;
-    data.ownerName = names[0];
+    data.ownerName = owners[0].name;
   }
 
   // 协办人变更
   if (patch.collaboratorIds !== undefined) {
     const ownerId = data.ownerId || (await getTemplate(ctx, templateId)).ownerId;
     const ids = validate.normalizeIds(patch.collaboratorIds, ownerId);
-    const names = await ctx.resolveNames(ids);
-    if (names.length !== ids.length) throw new BizError(Codes.INVALID_PARAM, '协办人中包含不存在的成员');
+    const members = await ctx.resolveMembers(ids);
+    if (members.length !== ids.length) throw new BizError(Codes.INVALID_PARAM, '协办人中包含不存在的成员');
+    ctx.assertAssignable(members, '协办人');
     data.collaboratorIds = ids;
-    data.collaboratorNames = names;
+    data.collaboratorNames = members.map((m) => m.name);
   }
 
   if (!Object.keys(data).length) throw new BizError(Codes.INVALID_PARAM, '没有需要更新的字段');

@@ -47,11 +47,13 @@ const MEMBERS = COLLECTIONS.MEMBERS;
 async function resolveCollaborators(ctx, rawIds, leaderId) {
   const ids = validate.normalizeIds(rawIds, leaderId);
   if (!ids.length) return { ids: [], names: '' };
-  const names = await ctx.resolveNames(ids);
-  if (names.length !== ids.length) {
+  const members = await ctx.resolveMembers(ids);
+  if (members.length !== ids.length) {
     throw new BizError(Codes.INVALID_PARAM, '所选协办人中包含不存在的成员，请刷新后重试');
   }
-  return { ids, names: names.join(';') };
+  // 管理者是只读角色，不能被拉进协作名单（前端已过滤，这里是不绕过的底线）
+  ctx.assertAssignable(members, '协办人');
+  return { ids, names: members.map((m) => m.name).join(';') };
 }
 
 /**
@@ -95,7 +97,7 @@ async function rebuildCollaboratorSnapshot(ctx, taskId) {
  * clientToken 提供幂等：网络重试/连点不会产生两条任务。
  */
 async function create(payload, ctx) {
-  const me = await ctx.requireMember();
+  const me = await ctx.requireWriter();
   const fields = validate.validateTaskFields(payload.task || {}, { isCreate: true });
   validate.assertTaskRequiredForCreate(fields);
 
@@ -123,8 +125,10 @@ async function create(payload, ctx) {
 async function adminCreate(payload, ctx) {
   const admin = await ctx.requireAdmin();
   const leaderId = validate.assertNonEmptyString(payload.leaderId, '主办人');
-  const leaderMember = (await ctx.resolveNames([leaderId]))[0];
+  const leaderMembers = await ctx.resolveMembers([leaderId]);
+  const leaderMember = leaderMembers[0];
   if (!leaderMember) throw new BizError(Codes.MEMBER_NOT_FOUND, '指定的主办人不存在或尚未认领');
+  ctx.assertAssignable(leaderMembers, '主办人');
 
   const fields = validate.validateTaskFields(payload.task || {}, { isCreate: true });
   validate.assertTaskRequiredForCreate(fields);
@@ -134,7 +138,7 @@ async function adminCreate(payload, ctx) {
   return insertTask(ctx, {
     fields,
     leaderId,
-    leaderName: leaderMember,
+    leaderName: leaderMember.name,
     collaboratorIds: ids,
     collaboratorNames: names,
     creatorId: admin.openid,
@@ -180,7 +184,7 @@ async function insertTask(ctx, opts) {
  *   服务端派生字段不在白名单内，前端改不动。
  */
 async function update(payload, ctx) {
-  await ctx.requireMember();
+  await ctx.requireWriter();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
   const task = await ctx.getTaskOrThrow(taskId);
   await ctx.requireLeaderOf(task);
@@ -224,7 +228,7 @@ async function update(payload, ctx) {
  *   仓库里有一道防线：scripts/selfcheck.js 末尾那节会扫出 { each: ... } 形态。
  */
 async function join(payload, ctx) {
-  await ctx.requireMember();
+  await ctx.requireWriter();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
   const task = await ctx.getTaskOrThrow(taskId);
 
@@ -264,7 +268,7 @@ async function join(payload, ctx) {
  *   要按多个值删就用 pull({ $in: [...] })，$ 号同样不能省。
  */
 async function leave(payload, ctx) {
-  await ctx.requireMember();
+  await ctx.requireWriter();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
   const task = await ctx.getTaskOrThrow(taskId);
 
@@ -288,7 +292,7 @@ async function leave(payload, ctx) {
 
 /** 主办人移除协办人（pull 的写法坑同 leave，见上） */
 async function removeCollaborator(payload, ctx) {
-  await ctx.requireMember();
+  await ctx.requireWriter();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
   const targetOpenid = validate.assertNonEmptyString(payload.collaboratorOpenid, '协办人');
   const task = await ctx.getTaskOrThrow(taskId);
@@ -317,7 +321,7 @@ async function removeCollaborator(payload, ctx) {
  * ★ 判据走 perm.canDeleteTask，与前端同一份函数，不在这里重写一遍规则。
  */
 async function remove(payload, ctx) {
-  const me = await ctx.requireMember();
+  const me = await ctx.requireWriter();
   const taskId = validate.assertNonEmptyString(payload.taskId, '任务');
   const task = await ctx.getTaskOrThrow(taskId);
 

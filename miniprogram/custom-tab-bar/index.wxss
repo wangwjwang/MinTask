@@ -1,0 +1,53 @@
+/*
+ * 自定义 tabBar 的样式。
+ *
+ * ★ 这段是**照着原生 tabBar 复刻**的，改之前先想清楚：
+ *   高度 100rpx、图标 48rpx、文字 20rpx、未选中 #8A8F99、选中 #2563EB ——
+ *   这些值目前仍写在 app.json 的 tabBar 配置里（custom=true 时那几项
+ *   只剩"切页前的兜底"作用，不再真正渲染）。两处若要一起改，
+ *   记得 app.json 的 color/selectedColor 也同步。
+ *
+ * ★ 颜色一律用全局令牌（app.wxss 的 page 选择器上定义）。
+ *   自定义属性会继承进组件，所以这里能直接 var()。
+ */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  height: 100rpx;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--card);
+  border-top: 2rpx solid var(--border);
+}
+
+.tabbar__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabbar__icon {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.tabbar__text {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+.tabbar__item--on .tabbar__text {
+  color: var(--primary);
+}
+
+/* 只读角色点不动的页签。整项一起淡，不是只淡文字 */
+.tabbar__item--off {
+  opacity: 0.35;
+}

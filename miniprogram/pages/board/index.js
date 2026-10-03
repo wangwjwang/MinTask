@@ -197,7 +197,14 @@ Page({
     this.segmentInitialized = false;
   },
 
+  /** 把选中态告诉自定义 tabBar（见 report/index.js 的同名方法） */
+  syncTabBar(index) {
+    const bar = this.getTabBar && this.getTabBar();
+    if (bar && bar.sync) bar.sync(index);
+  },
+
   onShow() {
+    this.syncTabBar(2);
     this.refresh();
   },
 
@@ -211,6 +218,9 @@ Page({
     } catch (e) {
       return;
     }
+
+    // 身份到手后再同步一次：onShow 那刻 bootstrap 可能还没回来
+    this.syncTabBar(2);
 
     try {
       if (!this.data.allTasks.length) this.setData({ loading: true });

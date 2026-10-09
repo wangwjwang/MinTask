@@ -1,0 +1,10 @@
+{
+  "name": "demandService",
+  "version": "1.0.0",
+  "description": "需求池服务：需求的新建、修改、关闭、重开、领走占位",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

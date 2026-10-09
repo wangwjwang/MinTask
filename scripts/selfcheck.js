@@ -486,6 +486,60 @@ checkThrows(
 );
 
 // ---------------------------------------------------------------------------
+/*
+ * 需求的白名单守的是需求池的权限根基：提出人与领走人若能被前端指定，
+ * perm.canEditDemand 就形同虚设（谁把自己写成提出人，谁就能处置这条需求）。
+ */
+section('需求字段白名单 — 派生字段必须挡在门外');
+
+check('需求创建白名单', validate.DEMAND_CREATE_FIELDS, ['title', 'detail', 'contactDept', 'contactName', 'expectDate']);
+check('需求更新白名单与创建一致', validate.DEMAND_UPDATE_FIELDS, validate.DEMAND_CREATE_FIELDS);
+
+const dv = validate.validateDemandFields(
+  {
+    title: '  和财富部聊权益  ',
+    detail: 'D',
+    contactDept: '财富部',
+    contactName: '王主任',
+    expectDate: '2026-10-31',
+    // 下面这些全是服务端派生字段，必须被静默丢弃
+    status: '已完成',
+    proposerId: 'o-hacker',
+    proposerName: '我不是张三',
+    claimedById: 'o-hacker',
+    closeReason: '我说了算',
+    createdAt: 0,
+  },
+  { isCreate: true }
+);
+check('标题去空白', dv.title, '和财富部聊权益');
+check('★ 服务端派生字段一个都进不来', Object.keys(dv).sort(), ['contactDept', 'contactName', 'detail', 'expectDate', 'title']);
+
+checkThrows('标题不能为空', () => validate.validateDemandFields({ title: '   ' }, { isCreate: true }), Codes.INVALID_PARAM);
+checkThrows('标题超长被拒', () => validate.validateDemandFields({ title: 'x'.repeat(101) }, { isCreate: true }), Codes.INVALID_PARAM);
+checkThrows('期望时间格式必须补零', () => validate.validateDemandFields({ title: 'T', expectDate: '2026-9-5' }, { isCreate: true }), Codes.INVALID_PARAM);
+check(
+  '期望时间可以为空（选填）',
+  validate.validateDemandFields({ title: 'T', expectDate: '' }, { isCreate: true }).expectDate,
+  ''
+);
+check(
+  '超长描述被截断而不是报错（与任务的 detail 同款）',
+  validate.validateDemandFields({ title: 'T', detail: 'x'.repeat(2500) }, { isCreate: true }).detail.length,
+  2000
+);
+
+checkThrows('创建时标题必填', () => validate.assertDemandRequiredForCreate({}), Codes.INVALID_PARAM);
+check('标题在时放行', validate.assertDemandRequiredForCreate({ title: 'T' }).title, 'T');
+
+// ★ 更新时只发改动过的字段：没传的字段不能出现在结果里（否则会把它们清空）
+check(
+  '★ 更新时没传的字段不出现（避免误清空）',
+  Object.keys(validate.validateDemandFields({ detail: '只改这个' }, { isCreate: false })),
+  ['detail']
+);
+
+// ---------------------------------------------------------------------------
 section('枚举字典完整性');
 
 check('任务分类 11 项', C.CATEGORY.length, 11);

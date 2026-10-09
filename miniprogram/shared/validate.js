@@ -77,6 +77,17 @@ const PROGRESS_BASE_FIELDS = ['description', 'blocker', 'needSupport'];
  */
 const PROGRESS_LEADER_EXTRA_FIELDS = ['progress', 'status', 'stage'];
 
+/**
+ * 需求创建时允许前端提交的字段。
+ * ★ 不含 status / proposerId / proposerName / claimedBy* / closedBy* ——
+ *   它们是服务端派生字段，只能由云函数按 openid 与成员档案写入。
+ *   提出人与领走人若能被前端指定，权限判据（perm.canEditDemand）就形同虚设。
+ */
+const DEMAND_CREATE_FIELDS = ['title', 'detail', 'contactDept', 'contactName', 'expectDate'];
+
+/** 需求可修改的字段 —— 与创建完全一致，需求没有"推进中才会变"的字段 */
+const DEMAND_UPDATE_FIELDS = DEMAND_CREATE_FIELDS;
+
 /** 校验枚举值是否合法 */
 function assertEnum(value, allowed, fieldLabel) {
   if (allowed.indexOf(value) === -1) {
@@ -190,12 +201,42 @@ function assertTaskRequiredForCreate(fields) {
   return fields;
 }
 
+/**
+ * 校验需求创建/更新的业务字段。返回规范化后的对象。
+ * 只做「字段级」校验，不涉及权限（权限在云函数里走 perm.canEditDemand）。
+ */
+function validateDemandFields(input, { isCreate }) {
+  const allowed = isCreate ? DEMAND_CREATE_FIELDS : DEMAND_UPDATE_FIELDS;
+  const raw = pick(input, allowed);
+  const out = {};
+
+  if ('title' in raw) out.title = assertNonEmptyString(raw.title, '需求标题', 100);
+  if ('expectDate' in raw) out.expectDate = assertDateOrEmpty(raw.expectDate, '期望时间');
+
+  // 自由文本字段，限制长度防止超长内容撑爆文档
+  if ('detail' in raw) out.detail = String(raw.detail || '').slice(0, 2000);
+  if ('contactDept' in raw) out.contactDept = String(raw.contactDept || '').slice(0, 50);
+  if ('contactName' in raw) out.contactName = String(raw.contactName || '').slice(0, 50);
+
+  return out;
+}
+
+/** 创建需求的必填项校验（在 validateDemandFields 之后调用） */
+function assertDemandRequiredForCreate(fields) {
+  if (!fields.title) throw new BizError(Codes.INVALID_PARAM, '需求标题不能为空');
+  return fields;
+}
+
 module.exports = {
   pick,
   TASK_CREATE_FIELDS,
   TASK_LEADER_UPDATE_FIELDS,
   PROGRESS_BASE_FIELDS,
   PROGRESS_LEADER_EXTRA_FIELDS,
+  DEMAND_CREATE_FIELDS,
+  DEMAND_UPDATE_FIELDS,
+  validateDemandFields,
+  assertDemandRequiredForCreate,
   assertEnum,
   assertNonEmptyString,
   assertDateOrEmpty,

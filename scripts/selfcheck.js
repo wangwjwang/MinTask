@@ -398,6 +398,35 @@ check('计划为 null 不崩', perm.canManageTemplate(null, 'ou_zhang', true), f
 check('同名不同 openid 拿不到管理权', perm.canManageTemplate(plan, 'ou_other', false), false);
 
 // ---------------------------------------------------------------------------
+/*
+ * 需求处置权。比任务宽一档：一条需求可能"跟我有关"的人有两个 ——
+ * 提出它的人、和把它领走的人；管理员照例兜底。
+ * 关闭与重开共用这一条判据（能关的人本来就该能改）。
+ */
+section('需求处置权 — 提出人、领走人、管理员');
+
+/** 造一条需求：只给判据字段，快照字段刻意用不相干的姓名 */
+const demand = { _id: 'd1', proposerId: 'ou_zhang', claimedById: 'ou_li', status: '已领走' };
+
+check('提出人可改', perm.canEditDemand(demand, 'ou_zhang', false), true);
+check('领走人可改', perm.canEditDemand(demand, 'ou_li', false), true);
+check('管理员可改他人的需求', perm.canEditDemand(demand, 'ou_wang', true), true);
+check('外人不可改', perm.canEditDemand(demand, 'ou_wang', false), false);
+check('★ 同名不同 openid 拿不到处置权', perm.canEditDemand(demand, 'ou_zhang2', false), false);
+check('openid 为空即便管理员也不放行', perm.canEditDemand(demand, '', true), false);
+check('openid 为 undefined 拒绝一切', perm.canEditDemand(demand, undefined, false), false);
+check('需求为空返回 false', perm.canEditDemand(null, 'ou_zhang', true), false);
+
+// 还没人领走的需求：只有提出人与管理员能动它
+const fresh = { _id: 'd2', proposerId: 'ou_zhang', claimedById: '', status: '待认领' };
+check('待认领的需求：提出人可改', perm.canEditDemand(fresh, 'ou_zhang', false), true);
+check('待认领的需求：没领过的人不可改', perm.canEditDemand(fresh, 'ou_li', false), false);
+check('★ claimedById 为空串时不会被误判成"空 openid 匹配空 openid"', perm.canEditDemand(fresh, '', false), false);
+
+// 关闭 / 重开共用同一个判据 —— 能关的人本来就该能改
+check('已关闭的需求：提出人仍可改（用于重开）', perm.canEditDemand({ _id: 'd3', proposerId: 'ou_zhang', claimedById: '', status: '已关闭' }, 'ou_zhang', false), true);
+
+// ---------------------------------------------------------------------------
 section('卡壳解决权限');
 
 const rec = { updaterId: 'ou_li', hasBlocker: true, blockerResolved: false };

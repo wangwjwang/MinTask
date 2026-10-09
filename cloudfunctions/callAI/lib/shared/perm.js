@@ -141,6 +141,32 @@ function canManageTemplate(template, openid, isAdmin) {
   return template.ownerId === openid || !!isAdmin;
 }
 
+/**
+ * 是否可处置一条需求（改字段 / 关闭 / 重开）。
+ *
+ * 规则：**提出人、领走人、或管理员** —— 三方都是"这条需求跟我有关"的人。
+ *
+ * ★ 一个函数管三件事，不再拆细。用户只对"关闭权限"拍过板（提出人 + 领走人 +
+ *   管理员），没说过"改"归谁。让两者共用同一条规则的理由有三条：
+ *     1. 能关的人本来就该能改 —— 关之前想补一句描述，不该被拦住；
+ *     2. 规则拆细就要写两个函数、测两组用例，而它们**必然会漂**
+ *        （改的规则变了、关的忘了跟着变，就是"能改不能关"这种说不通的状态）；
+ *     3. 这三件事共享同一个语义：「这条需求跟你有关，你可以处置它」。
+ *
+ * ★ 「领走人」不需要反查任务：领走那一刻就把 openid 写进了 demand.claimedById。
+ *   这也是它必须存 openid、不能只存姓名的原因。
+ *
+ * ★ 只读角色「管理者」在这里不需要额外开洞：他作为提出人时 proposerId 已经
+ *   匹配上了。他永远领不走（领走 = 建任务，那条路仍走 requireWriter）。
+ *
+ * ★ proposerId / claimedById 是判据，proposerName / claimedByName 是快照。
+ *   本函数只比对 Id —— 与文件头第 1 条纪律（绝不比对姓名字符串）一致。
+ */
+function canEditDemand(demand, openid, isAdmin) {
+  if (!openid || !demand) return false;
+  return demand.proposerId === openid || demand.claimedById === openid || !!isAdmin;
+}
+
 module.exports = {
   isLeader,
   isParticipant,
@@ -153,4 +179,5 @@ module.exports = {
   canRemoveCollaborator,
   canDeleteTask,
   canManageTemplate,
+  canEditDemand,
 };

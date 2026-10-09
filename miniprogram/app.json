@@ -13,7 +13,8 @@
     "pages/plan-edit/index",
     "pages/task-edit/index",
     "pages/task-detail/index",
-    "pages/person-detail/index"
+    "pages/person-detail/index",
+    "pages/demand-edit/index"
   ],
   "window": {
     "backgroundTextStyle": "light",

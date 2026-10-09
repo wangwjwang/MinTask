@@ -1,0 +1,183 @@
+<!--
+  pages/demand-edit 新建需求 / 看一条需求
+
+  ★ 一页两态：canEdit 为真走表单，为假走只读摘要。
+    判据只有 perm.canEditDemand 一处（云函数用同一个函数）。
+  ★ 只读分支里没有任何输入控件、按钮、bindtap —— 不是把表单灰掉。
+  ★ 两个 <block> 之间不能夹注释：wx:else 必须紧跟着它的 wx:if。
+-->
+<view class="page page--with-footer">
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载…</view>
+
+  <block wx:else>
+    <block wx:if="{{canEdit}}">
+      <!-- ── 基本信息 ──────────────────────────────────────────────── -->
+      <view class="card">
+        <view class="field">
+          <view class="field__label field__label--required">需求标题</view>
+          <input
+            class="field__input"
+            placeholder="一句话说清要办什么事，例如：和财富部聊机场贵宾权益"
+            placeholder-class="field__placeholder"
+            value="{{form.title}}"
+            data-field="title"
+            maxlength="100"
+            bindinput="onInput"
+          />
+        </view>
+
+        <view class="field">
+          <view class="field__label">需求描述</view>
+          <textarea
+            class="field__textarea"
+            placeholder="背景、想要达到什么效果、已知的限制…（选填）"
+            placeholder-class="field__placeholder"
+            value="{{form.detail}}"
+            data-field="detail"
+            maxlength="2000"
+            auto-height
+            bindinput="onInput"
+          />
+        </view>
+      </view>
+
+      <!-- ── 对接的人（纯文本，不进 members）──────────────────────── -->
+      <view class="card">
+        <view class="field">
+          <view class="field__label">对接部门</view>
+          <input
+            class="field__input"
+            placeholder="例如：财富部（选填）"
+            placeholder-class="field__placeholder"
+            value="{{form.contactDept}}"
+            data-field="contactDept"
+            maxlength="50"
+            bindinput="onInput"
+          />
+        </view>
+
+        <view class="field">
+          <view class="field__label">对接人</view>
+          <input
+            class="field__input"
+            placeholder="例如：王主任（选填）"
+            placeholder-class="field__placeholder"
+            value="{{form.contactName}}"
+            data-field="contactName"
+            maxlength="50"
+            bindinput="onInput"
+          />
+        </view>
+
+        <picker mode="date" value="{{form.expectDate}}" start="{{minDate}}" end="{{maxDate}}" bindchange="onExpectDateChange">
+          <view class="field--picker">
+            <view class="field__label picker__label">期望时间</view>
+            <view class="row">
+              <text class="field__value t-mono {{form.expectDate ? '' : 'field__value--empty'}}">
+                {{form.expectDate || '未设置'}}
+              </text>
+              <text class="field__arrow">›</text>
+            </view>
+          </view>
+        </picker>
+
+        <view class="t-muted demand__tip">
+          对接部门与对接人是外部联系人：他们不进成员名单，也不能被选为主办或协办。
+          这里只记「要去找谁聊」。
+        </view>
+      </view>
+
+      <!-- ── 危险区：关闭 / 重新打开（新建时没有）──────────────────── -->
+      <view wx:if="{{!isNew}}" class="card card--flat edit__danger-zone">
+        <block wx:if="{{status === '已关闭'}}">
+          <view class="t-muted edit__danger-tip">
+            {{closedText}}。重新打开后，这条需求会按它名下的任务回到「待认领」或「已领走」。
+          </view>
+          <button class="btn btn--plain btn--sm edit__state" bindtap="onReopen">重新打开</button>
+        </block>
+        <block wx:else>
+          <view class="t-muted edit__danger-tip">
+            关闭表示「这件事先不做了」。关闭后需求仍留在池子里，随时可以重新打开。
+          </view>
+          <input
+            class="field__input"
+            placeholder="关闭原因（选填，例如：聊完了，不用做）"
+            placeholder-class="field__placeholder"
+            value="{{closeReason}}"
+            maxlength="200"
+            bindinput="onCloseReasonInput"
+          />
+          <button class="btn btn--plain btn--sm edit__danger" bindtap="onClose">关闭需求</button>
+        </block>
+      </view>
+
+      <!-- ── 关联任务（只读信息，两个分支共用；编辑态里也摆在最下面）── -->
+      <view wx:if="{{tasks.length}}" class="card card--flat">
+        <view class="t-sub demand__tasks-title">这条需求名下的任务（{{tasks.length}}）</view>
+        <task-card
+          wx:for="{{tasks}}"
+          wx:for-item="task"
+          wx:key="_id"
+          task="{{task}}"
+          show-leader
+          bind:tap="onTaskTap"
+        />
+      </view>
+    </block>
+
+    <block wx:else>
+      <!--
+        只读：给的是"这条需求是什么"，不是一张改不动的表。
+      -->
+      <view class="card">
+        <view class="row row--between edit__ro-head">
+          <text class="t-title ellipsis">{{form.title}}</text>
+          <text class="badge badge--{{_statusTone}}">{{_statusText}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">提出人</text>
+          <text class="edit__ro-v">{{proposerName || '—'}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">对接</text>
+          <text class="edit__ro-v">{{_contactText || '—'}}</text>
+        </view>
+
+        <view class="edit__ro-line">
+          <text class="edit__ro-k">期望时间</text>
+          <text class="edit__ro-v t-mono">{{_expectText || '未设置'}}</text>
+        </view>
+
+        <view wx:if="{{form.detail}}" class="t-muted edit__ro-detail">{{form.detail}}</view>
+      </view>
+
+      <view wx:if="{{tasks.length}}" class="card card--flat">
+        <view class="t-sub demand__tasks-title">这条需求名下的任务（{{tasks.length}}）</view>
+        <task-card
+          wx:for="{{tasks}}"
+          wx:for-item="task"
+          wx:key="_id"
+          task="{{task}}"
+          show-leader
+          bind:tap="onTaskTap"
+        />
+      </view>
+
+      <view class="card card--flat edit__tip">
+        <view class="t-sub">这条需求不是你提的、也不是你领的，只能查看。</view>
+      </view>
+    </block>
+  </block>
+</view>
+
+<view wx:if="{{canEdit}}" class="footer-bar">
+  <button
+    class="btn btn--primary"
+    loading="{{submitting}}"
+    disabled="{{submitting}}"
+    bindtap="onSave"
+  >{{isNew ? '提交需求' : '保存修改'}}</button>
+</view>

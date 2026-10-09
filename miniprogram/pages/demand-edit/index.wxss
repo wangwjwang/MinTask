@@ -1,0 +1,16 @@
+/*
+ * pages/demand-edit
+ * ★ 表单字段与危险区样式全部复用 app.wxss 的通用件（.card / .field /
+ *   .edit__ro-* / .edit__danger-*），本页只加"这一页才有"的两条：
+ *   说明文字与关联任务小标题的间距。
+ */
+
+.demand__tip {
+  margin-top: 16rpx;
+  font-size: var(--fs-caption);
+  line-height: 1.6;
+}
+
+.demand__tasks-title {
+  margin-bottom: 16rpx;
+}

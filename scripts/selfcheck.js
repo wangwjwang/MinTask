@@ -980,6 +980,27 @@ async function demandRepoChecks(repo) {
   await repo.syncDemandStatus(dz, 'd1');
   check('★ 任务被删光后清空领走人', [dz.store.demands[0].claimedById, dz.store.demands[0].claimedByName], ['', '']);
 
+  // ⑦b 领走人缺失时要能从关联任务回填
+  // 场景：占位成功后建任务的响应丢了 → 回滚清空领走人 → 用户拿同一令牌重试，
+  // 幂等重放直接返回那条已建好的任务（不再占位）。需求就挂着任务却没有领走人，
+  // 次日巡检把它推成「已领走」时若不回填，这条需求谁也改不了、关不掉 —— 僵死态。
+  const dbf = demandDb({
+    demands: [Object.assign(NEW_DEMAND(), { status: '待认领', claimedById: '', claimedByName: '', claimedAt: null })],
+    tasks: [Object.assign(NEW_TASK('t1', '进行中'), { leaderId: 'o-li', leader: '李四' })],
+  });
+  const bf = await repo.syncDemandStatus(dbf, 'd1');
+  check('★ 领走人缺失时从关联任务回填（openid 是判据）', [bf.status, dbf.store.demands[0].claimedById], ['已领走', 'o-li']);
+  check('★ 回填的姓名是任务里的快照', dbf.store.demands[0].claimedByName, '李四');
+  check('★ 回填时补上领走时间', dbf.store.demands[0].claimedAt, 'SERVER_DATE');
+
+  // 已在「已领走」但领走人缺失（巡检上一轮漏了 / 老数据）也要补上 —— 否则永远补不回来
+  const dbf2 = demandDb({
+    demands: [Object.assign(NEW_DEMAND(), { status: '已领走', claimedById: '' })],
+    tasks: [Object.assign(NEW_TASK('t1', '进行中'), { leaderId: 'o-li', leader: '李四' })],
+  });
+  const bf2 = await repo.syncDemandStatus(dbf2, 'd1');
+  check('★ 状态已是已领走但没领走人，也回填', [bf2.changed, dbf2.store.demands[0].claimedById], [true, 'o-li']);
+
   // ⑧ 状态没变时不写库（每日巡检几百条，全写一遍是白费）
   const dsame = demandDb({ demands: [Object.assign(NEW_DEMAND(), { status: '已领走' })], tasks: [NEW_TASK('t1', '进行中')] });
   const same = await repo.syncDemandStatus(dsame, 'd1');

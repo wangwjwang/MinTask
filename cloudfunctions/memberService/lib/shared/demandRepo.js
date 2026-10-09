@@ -255,12 +255,31 @@ async function applyStatus(db, demand, opts) {
   else next = '已领走';
 
   const data = { status: next, updatedAt: db.serverDate() };
+  let backfilled = false;
 
   // 任务被删光 → 需求回到池子里，让下一个人领，而不是卡在"已领走但没人办"
   if (next === '待认领') {
     data.claimedById = '';
     data.claimedByName = '';
     data.claimedAt = null;
+  }
+  // 领走人缺失 → 从关联任务的主办人回填。
+  // ★ 什么情况下会缺：占位成功后建任务的响应丢了（add 超时），
+  //   create 回滚清空领走人，用户拿同一令牌重试时幂等重放直接返回那条
+  //   已建好的任务 —— 需求就挂着任务却没有领走人。若巡检把它推成
+  //   「已领走」而不回填，这条需求谁也改不了、关不掉（不是自己领的、
+  //   也没人被记成领走人），只能靠删任务脱困。
+  // ★ 只在有主办人 openid 可取时才回填：老数据的任务可能没有 leaderId，
+  //   那种情况保持原样，别为了补一个空值反而每轮巡检都写一次库。
+  if (next === '已领走' && !demand.claimedById) {
+    const owner = tasks.find((t) => t.leaderId);
+    if (owner) {
+      data.claimedById = owner.leaderId;
+      data.claimedByName = owner.leader || '';
+      // 真正的领走时刻已不可考，记成"系统认领这一刻"，总好过空着
+      data.claimedAt = db.serverDate();
+      backfilled = true;
+    }
   }
   // 重开：清掉关闭痕迹（在同一次 update 里，不留下中间态）
   if (opts.fromReopen) {
@@ -269,7 +288,9 @@ async function applyStatus(db, demand, opts) {
     data.closeReason = '';
   }
 
-  const changed = demand.status !== next || !!opts.fromReopen;
+  // 回填领走人也算变化 —— 状态可能已经是「已领走」（巡检上一轮漏了 / 老数据），
+  // 那时 status 不变，但这一笔必须落库
+  const changed = demand.status !== next || !!opts.fromReopen || backfilled;
   if (!changed) return { status: next, changed: false };
 
   await db.collection(DEMANDS).doc(String(demand._id)).update({ data });

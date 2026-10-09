@@ -34,16 +34,18 @@
 | 入口 | 页面 | 说明 |
 |---|---|---|
 | 启动页 | `pages/claim` | 首次进入从预置名单中**认领自己**，完成 openid ↔ 姓名绑定 |
-| Tab1 | `pages/report` | 报任务：我主办的 / 我协办的 / 已完成，页面最下方是「新建任务」「新加入协办」两个入口行 |
-| Tab2 | `pages/update` | 改任务：我主办的在办任务 + 编辑入口 |
-| Tab3 | `pages/board` | 任务看板：分段切换（周期性计划 / 进行中 / 已完成）+ 段内按分类分组 + 卡壳高亮 |
-| Tab4 | `pages/people` | 人员看板：全员负载一览，点击下钻某人任务 |
+| Tab1 | `pages/demands` | 领需求：需求池（待认领 / 我领的 / 我提的 / 已关闭 四个分段 + 横滑切换），新建需求入口在列表下方 |
+| Tab2 | `pages/report` | 报任务：我主办的 / 我协办的 / 已完成，页面最下方是「新建任务」「新加入协办」两个入口行 |
+| Tab3 | `pages/update` | 改任务：我主办的在办任务 + 编辑入口 |
+| Tab4 | `pages/board` | 任务看板：分段切换（周期性计划 / 进行中 / 已完成）+ 段内按分类分组 + 卡壳高亮 |
+| Tab5 | `pages/people` | 人员看板：全员负载一览，点击下钻某人任务 |
 | 子页 | `pages/progress-add` | 上报进展（描述 / 卡壳 / 需要支持，主办人可同步改进度与状态） |
 | 子页 | `pages/task-create` / `task-edit` | 新建 / 编辑任务（仅主办人） |
 | 子页 | `pages/task-detail` | 任务详情 + 进展时间线 + 卡壳解决 |
 | 子页 | `pages/person-detail` | 某成员名下的主办 / 协办任务 |
 | 子页 | `pages/join` | 可加入的任务列表 |
 | 子页 | `pages/plans` / `plan-edit` | 我的计划列表 / 看一份计划（自己的可改，别人的只读 —— 看板点进去落这里） |
+| 子页 | `pages/demand-edit` | 新建需求 / 看改一条需求（提出人、领走人、管理员可改，其余只读） |
 
 **核心能力**
 
@@ -52,6 +54,9 @@
 - 周期计划：建计划时**不生成任务**，到了每期的开始日由定时函数自动生成当期任务
   （任务名 = 期间 + 计划名），**幂等，重复触发不产生重复任务**。详见 [第 6 节](#6-周期计划)。
 - AI 精简：`callAI` 云函数已完整实现（DeepSeek），但**默认关闭**。开启步骤与注意事项见 [7.5 AI 精简：开启与关闭](#75-ai-精简开启与关闭)。
+- 需求池：还没成形的事先记进池子，谁都可以记；挑一条自己接过去办就是**建任务**
+  （来源自动填「需求池」）。需求的 `status` 由关联任务反算，不手改。
+  详见 [4.6 `demands` 需求池](#46-demands-需求池)。
 
 ---
 
@@ -72,6 +77,7 @@ TeamPulse/
 │   ├── idempotency.js           确定性 _id 生成与重复键识别
 │   ├── periodic.js              周期计划：期内偏移、占位符渲染、生成判定
 │   ├── taskRepo.js              任务文档构造、卡壳重算、阶段副作用
+│   ├── demandRepo.js            需求文档构造、领走占位/回滚、状态重算（唯一出口）
 │   ├── periodicRunner.js        周期生成主流程（定时与手动补跑共用）
 │   ├── ctx.js        ⚠ 云函数专属（含 wx-server-sdk）
 │   ├── router.js     ⚠ 云函数专属
@@ -82,7 +88,7 @@ TeamPulse/
 │
 ├── scripts/
 │   ├── sync-shared.js           把 shared/ 分发到小程序端与各云函数
-│   ├── selfcheck.js             184 项纯逻辑断言，改 shared/ 后必跑
+│   ├── selfcheck.js             319 项纯逻辑断言，改 shared/ 后必跑
 │   ├── members.json             成员名单（★ 编辑这个）
 │   ├── make-member-import.js    转成云数据库可导入的 JSON Lines 格式
 │   ├── members.import.json      ↑ 的产物，导入控制台用这个（不提交）
@@ -92,6 +98,7 @@ TeamPulse/
 │   ├── progress_records.import.json  ↑ 的产物（不提交）
 │   ├── make-collab-fix-import.js 把某人从若干任务的协办名单里摘干净（见 5.1）
 │   ├── tasks.collabfix.import.json  ↑ 的产物（不提交）
+│   ├── make-source-rename-import.js  SOURCE 改名的一次性迁移（见 4.6）
 │   └── gen-tabbar-icons.js      tabBar 图标生成（产物已入库，平时不用跑）
 │
 ├── cloudfunctions/
@@ -101,15 +108,17 @@ TeamPulse/
 │   ├── templateService/         周期计划：建/改/停用/删除（主办人或管理员）+ 看板用的全量列表
 │   ├── generatePeriodicTasks/   ★ 含 config.json 定时触发器
 │   ├── callAI/                  AI 精简（providers/deepseek.js）
-│   └── notifyService/           订阅消息 stub
+│   ├── notifyService/           订阅消息 stub
+│   ├── demandService/           需求池：建/改/关/重开/领走（唯一对管理者开放的写域）
+│   └── dashboardService/        电脑端看板（只读，自包含不用 shared/）
 │
 └── miniprogram/
     ├── app.js / app.json / app.wxss / sitemap.json
     ├── config.js                ★ 部署时唯一需要手改的文件
     ├── shared/                  （由 sync-shared.js 生成的副本，已提交进仓库）
-    ├── utils/                   api / db / auth / format / toast
+    ├── utils/                   api / db / auth / format / toast / swipe / theme
     ├── components/              task-card / empty-state / field-picker
-    └── pages/                   11 个页面
+    └── pages/                   16 个页面
 ```
 
 ### 为什么 `shared/` 要复制而不是引用
@@ -176,7 +185,7 @@ envId: 'cloud1-1g2h3i4j5k6l7m8n',   // ← 改这里，全项目只改这一处
 
 ### 3.4 创建数据库集合
 
-云开发控制台 → **数据库** → 新建以下 **5 个集合**：
+云开发控制台 → **数据库** → 新建以下 **6 个集合**：
 
 | 集合 | 用途 | 安全规则 |
 |---|---|---|
@@ -185,6 +194,7 @@ envId: 'cloud1-1g2h3i4j5k6l7m8n',   // ← 改这里，全项目只改这一处
 | `progress_records` | 进展记录 | `{"read": true, "write": false}` |
 | `periodic_templates` | 周期计划 | `{"read": false, "write": false}` |
 | `job_logs` | 定时任务审计日志 | `{"read": false, "write": false}` |
+| `demands` | 需求池（2026-10-09 新增） | `{"read": false, "write": false}` |
 
 > **安全规则必须用 `{"read": true, "write": false}`，不要用"仅创建者可写"。**
 > 原因：云函数写入的记录**不带 `_openid` 字段**（该字段只在客户端 SDK 写入时自动添加），
@@ -215,6 +225,9 @@ envId: 'cloud1-1g2h3i4j5k6l7m8n',   // ← 改这里，全项目只改这一处
 | `progress_records` | `taskId` + `updatedAt`（降序） | 复合 | 详情页时间线 |
 | `progress_records` | `updaterId` | 单字段 | 按人查进展 |
 | `periodic_templates` | `enabled` | 单字段 | 每日巡检扫描 |
+| `demands` | `status` | 单字段 | 需求池「待认领」「已关闭」两个分段 |
+| `demands` | `proposerId` | 单字段 | 需求池「我提的」分段 |
+| `demands` | `claimedById` | 单字段 | 需求池「我领的」分段 |
 
 > `members.openid` 建**唯一索引**有个额外好处：它从数据库层面兜住了
 > "两个账号认领同一人"的并发漏洞（虽然 `claim` 云函数已用 CAS 抢占处理了）。
@@ -493,6 +506,53 @@ openid 要等本人来认领才产生，所以导入时 `leaderId` / `collaborat
 }
 ```
 
+### 4.6 `demands` 需求池
+
+```js
+{
+  title: '和财富部聊机场贵宾权益',   // 一句话说清要办的事
+  detail: '',                        // 背景、验收标准的补充
+  contactDept: '', contactName: '',  // 外部联系人（部门 / 姓名），都是自由文本
+  expectDate: '',                    // ★ 定长 YYYY-MM-DD，期望完成时间，可空
+
+  // —— 权限字段（前端不可写，由云函数从 openid 带出）——
+  proposerId: 'oXXXX',               // 提出人 openid
+  claimedById: '',                   // 领走人 openid，空串 = 还没人接
+
+  // —— 展示快照（服务端按 id 解析姓名后写入，前端不可写）——
+  proposerName: '张三',
+  claimedByName: '',
+  claimedAt: null,                   // 领走时间，任务被删光回到池子时清空
+
+  // —— 状态（四个取值，由服务端唯一出口 syncDemandStatus 重算）——
+  status: '待认领' | '已领走' | '已完成' | '已关闭',
+  closedByName: '', closedAt: null, closeReason: '',   // 关闭时写入，重开时清掉
+
+  createdAt, updatedAt
+}
+```
+
+**需求 ≠ 任务。** 需求是「还没成形的事」，任务是「已经有人认领的事」——
+`tasks` 里加了一个 `demandId` 字段指向需求。**领走不是一个按钮，而是
+"就这条需求建一个任务"这个动作本身**（在需求池点开一条待认领的需求，
+就是新建任务页，来源会自动填好「需求池」）。
+
+> **需求的 `status` 由关联任务反算，不许手改。**
+> 全部出口在 `demandService` 的 `syncDemandStatus()`：新建任务、报进展、
+> 删任务、每日巡检四处触发，失败一律隔离（`syncDemandQuietly`），
+> 漏网的由 `generatePeriodicTasks` 每天兜底收敛一次。
+> 校验函数 `assertEnum` 会拒掉不在枚举里的取值。
+
+> ★ 2026-10-09 起 `SOURCE` 的第三项由「业务部门提报」改名为「需求池」
+> （`shared/constants.js`，枚举仍是 8 项、顺序不变）。
+> 库里历史任务的 `source` 需要一次性迁移，见
+> [`scripts/make-source-rename-import.js`](scripts/make-source-rename-import.js)：
+> 从控制台导出 `tasks` 快照 → 跑脚本生成覆盖导入件 → 控制台覆盖导入。
+> **新枚举一上线，那 14 条老任务就处于"能读、一保存就被拒"的状态，
+> 所以部署完云函数要立刻跑迁移**，顺序见 [附：部署检查清单](#附部署检查清单)。
+> **不要**重跑 `make-task-import.js` 再导入 —— 那份 CSV 是 2026-08 的初始快照，
+> 会把三个月来的现值（进度、状态、姓名快照）全部抹掉。
+
 ---
 
 ## 5. 权限矩阵
@@ -512,6 +572,22 @@ openid 要等本人来认领才产生，所以导入时 `leaderId` / `collaborat
 | 变更周期计划的主办人 | ❌ | ❌ | ❌ | ✅ | ❌ |
 | 查看任务看板 / 人员看板 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 被选为主办人或协办人 | — | — | ✅ | ✅ | ❌ |
+
+**需求池（`demands`）单独一张表** —— 这是全站**唯一**对「管理者」开放的写域：
+
+| 操作 | 普通成员 | 提出人 | 领走人 | 管理员 | 管理者（只读） |
+|---|:---:|:---:|:---:|:---:|:---:|
+| 看需求池 | ✅ | ✅ | ✅ | ✅ | **✅（2026-10-09 放开）** |
+| 新建需求 | ✅ | — | — | ✅ | **✅（2026-10-09 放开）** |
+| 改需求 | ❌ | ✅ | ✅ | ✅ | 仅自己提的 |
+| 领走（= 建任务） | ✅ | ✅ | ❌ | ✅ | ❌ |
+| 关闭 / 重开 | ❌ | ✅ | ✅ | ✅ | 仅自己提的 |
+
+> ★ 需求池是**唯一**一个对「管理者」开放的写域。任务是只读、进展是只读、
+> 计划是只读、成员是只读 —— 那四个域一行没改。他领不走需求，因为
+> 领走 = 建任务，而 `taskService.create` 的第一步仍是 `ctx.requireWriter()`。
+> 权限判据是 `shared/perm.js` 的 `canEditDemand()`（前后端同一个函数：
+> 提出人 / 领走人 / 管理员三条，没有任何角色特判）。
 
 > ★ **`管理者` 是只读角色，和 `管理员` 不是一回事**（名字像，权限相反）：
 > 管理员什么都能干，管理者只能看两个看板 —— TA 不参与报任务/改任务。
@@ -810,8 +886,14 @@ _id = `pt-${templateId}-${periodKey}`   // 如 pt-tpl001-2026-10
 
 ```bash
 node scripts/sync-shared.js     # 分发到两端
-node scripts/selfcheck.js       # 125 项断言，改坏了立刻能发现
+node scripts/selfcheck.js       # 319 项断言，改坏了立刻能发现
 ```
+
+> ★ **改名（而不只是新增）一个已有取值的枚举项时，代码改完还要迁数据。**
+> `assertEnum` 会拒掉不在枚举里的取值，库里存着旧值的记录会变成
+> "能读、一保存就被拒"。2026-10-09 的 `SOURCE` 改名就是这样：
+> 代码上传与数据迁移必须紧挨着做，见 [4.6](#46-demands-需求池)
+> 与 [需求池上线清单](#附需求池上线清单2026-10-09)。
 
 ### 7.2 改权限规则
 
@@ -833,7 +915,7 @@ node scripts/selfcheck.js       # 125 项断言，改坏了立刻能发现
 node scripts/selfcheck.js
 ```
 
-125 项纯逻辑断言，覆盖**点击 UI 验证不到的部分**：
+319 项纯逻辑断言，覆盖**点击 UI 验证不到的部分**：
 
 - 日期补零（`'2026-9-5'` 必须被拒绝，否则会破坏字符串排序）
 - 截止日边界（2 月 30 号收敛、跨月、跨年）
@@ -949,7 +1031,7 @@ Web 端接入时：
 **Q：报「数据库集合「xxx」不存在」**
 两种情况，按顺序排查：
 
-1. **集合还没建** —— 见 [3.4](#34-创建数据库集合)，5 个集合一个都不能少
+1. **集合还没建** —— 见 [3.4](#34-创建数据库集合)，6 个集合一个都不能少
 2. **云函数和小程序不在同一个环境** —— 云函数用的是 `DYNAMIC_CURRENT_ENV`
    （跟随**部署时所在的环境**），不是 `config.js` 里的 `envId`。
    如果你有多个环境，在 A 环境部署了云函数、`config.js` 却指向 B 环境，
@@ -1058,13 +1140,13 @@ Web 端接入时：
 
 - [ ] `project.config.json` 的 `appid` 已改为真实 AppID
 - [ ] 云开发环境已开通，`miniprogram/config.js` 的 `envId` 已填
-- [ ] 5 个集合已创建，安全规则均为 `{"read": true/false, "write": false}`
+- [ ] 6 个集合已创建，安全规则均为 `{"read": true/false, "write": false}`
 - [ ] 索引已建（至少 `members.openid` 与 `tasks.templateId+periodKey` 两个唯一索引）
 - [ ] 已跑 `node scripts/make-member-import.js`，并把生成的 `members.import.json`
       （**不是** `members.json`）导入 `members` 集合
 - [ ] 导入的每条记录都**显式含** `openid: ""`（在控制台点开一条确认，不能是"无此字段"）
 - [ ] 名单里至少有一个人 `role` 是 `管理员`
-- [ ] 7 个云函数已上传部署
+- [ ] 9 个云函数已上传部署
 - [ ] `generatePeriodicTasks` 与 `templateService` 超时调至 60s，`callAI` 与 `memberService` 调至 20s
 - [ ] `generatePeriodicTasks` 的定时触发器已生效
 - [ ] 验证：小程序端直连 `tasks.add()` 被拒绝（证明安全规则生效）
@@ -1079,3 +1161,30 @@ Web 端接入时：
 - [ ] `tasks.import.json` 与 `progress_records.import.json` 分别导入对应集合
 - [ ] 大家认领完，管理员在「人员」Tab 点「把历史任务关联到已认领的同事」
 - [ ] 验证：点进某个任务，「我主办的」列表里出现该任务、主办人能编辑
+
+---
+
+## 附：需求池上线清单（2026-10-09）
+
+**顺序是硬约束，第 3 步和第 4 步之间不要留间隔。**
+
+1. **新建集合 `demands`**（安全规则 `{"read": false, "write": false}`）；
+   建议索引：`status`、`proposerId`、`claimedById`
+2. `node scripts/sync-shared.js`
+3. **重新部署用到 `lib/shared` 的 8 个云函数**：
+   `callAI`、`demandService`、`generatePeriodicTasks`、`memberService`、
+   `notifyService`、`progressService`、`taskService`、`templateService`。
+   ★ **`dashboardService` 不用传** —— 它只 require `wx-server-sdk`，
+   不使用 `shared/`（有意做成自包含）。`sync-shared.js` 会照灌一份
+   `lib/shared` 进去，但那是死副本，已在 `.gitignore` 里排除。
+4. ★ **部署完立刻跑迁移，中间不要有间隔**：
+
+   ```
+   云开发控制台导出 tasks 集合快照 → 存到仓库外
+   node scripts/make-source-rename-import.js <快照路径>
+   控制台「覆盖导入」scripts/tasks.sourcerename.import.json
+   ```
+
+   新枚举一上线，那 14 条 `source: '业务部门提报'` 的任务就处于
+   "能被读、一保存就被拒"的状态，所以 3 与 4 之间不能等。
+5. 开发者工具人肉验收（见 [docs/使用说明.html](docs/使用说明.html) 与本文档的权限矩阵）

@@ -175,7 +175,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
   <p class="hero__sub">微信小程序。给日常使用的同事看的，读完大约 5 分钟。</p>
   <nav class="toc">
     <a href="#claim">① 认领姓名</a>
-    <a href="#pages">② 四个页面</a>
+    <a href="#pages">② 五个页面</a>
     <a href="#card">③ 看懂任务卡片</a>
     <a href="#report">④ 上报进展</a>
     <a href="#create">⑤ 建任务 / 建计划 / 改任务</a>
@@ -226,10 +226,10 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
   <div class="note warn"><b>选姓名前请看清楚。</b>选错的话，你名下没有数据，也改不了自己主办的任务 —— 这种情况找管理员在后台改，自己在小程序里改不了。</div>
 </section>
 
-<!-- ══ ② 四个页面 ═══════════════════════════════════════════════ -->
+<!-- ══ ② 五个页面 ═══════════════════════════════════════════════ -->
 <section id="pages">
-  <h2><span class="num">②</span>四个页面</h2>
-  <p class="lead">底部四个页签，分工是「哪一页就做哪一件事」—— 同一张任务卡片，在不同页面点进去的地方不一样。</p>
+  <h2><span class="num">②</span>五个页面</h2>
+  <p class="lead">底部五个页签，分工是「哪一页就做哪一件事」—— 同一张任务卡片，在不同页面点进去的地方不一样。</p>
 
   <div class="phone phone--solo">
     <div class="phone__body" style="min-height:120px">
@@ -238,6 +238,10 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
       <div class="m-card"><div class="m-title">看板的卡片</div><div class="m-sub">点一下 → 只读的任务详情</div></div>
     </div>
     <div class="tabbar">
+      <div>
+        <svg viewBox="0 0 24 24"><path d="M12 4v10M8 11l4 4 4-4"/><path d="M5 19h14"/></svg>
+        领需求
+      </div>
       <div class="on">
         <svg viewBox="0 0 24 24"><rect x="4" y="4.5" width="16" height="16" rx="3"/><path d="M9 3.2h6v3.3H9z"/><path d="M12 10.5v6M9 13.5h6"/></svg>
         报任务
@@ -258,13 +262,23 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
   </div>
 
   <ul>
+    <li><b>领需求</b> —— 还没成形的事都记在这里（见下面那段）。</li>
     <li><b>报任务</b> —— 我的任务总览（我主办的 / 我协办的 / 已完成），新建任务也在这里。</li>
     <li><b>改任务</b> —— 我主办的在办任务，点进去编辑；页面底部还有「管理我的计划」「退出协办」两个入口。</li>
     <li><b>任务看板</b> —— 全团队的任务，按阶段分段看；只读。</li>
     <li><b>人员看板</b> —— 每个人的任务负载，点某人看他名下的任务；只读。</li>
   </ul>
 
-  <div class="note">如果账号是<b>只读的「管理者」</b>，前两个页签会变灰点不动，只有两个看板可用 —— 这是设计如此，不是故障。</div>
+  <div class="note">
+    <b>领需求</b> 这个页签：那里放着还没成形的事 ——「得找财富部聊聊那个权益的事」。
+    谁都可以记一条进去，也可以挑一条自己接过去办（点开那条待认领的需求就是新建任务，
+    来源会自动填好「需求池」）。事情办完了，需求会自动变成「已完成」；
+    决定不做了，可以把它关掉，写一句原因，以后还能重新打开。
+    页面上四个分段 —— <b>待认领</b>（等着人接的）、<b>我领的</b>、<b>我提的</b>、<b>已关闭</b>，
+    左右滑动可以切换。
+  </div>
+
+  <div class="note">如果账号是<b>只读的「管理者」</b>，「报任务」「改任务」两个页签会变灰点不动 —— 这是设计如此，不是故障。看板他都能看，「领需求」也能看、能自己提需求，只是不能把别人的需求领去办。</div>
 </section>
 
 <!-- ══ ③ 任务卡片 ═══════════════════════════════════════════════ -->
@@ -516,10 +530,16 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
       <tr><td>标记卡壳已解决</td><td class="yes">任意一条</td><td class="yes">仅自己提的</td><td class="no">—</td><td class="no">—</td></tr>
       <tr><td>删除任务</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
       <tr><td>建 / 改 / 停用周期计划</td><td class="yes">自己建的</td><td class="yes">自己建的</td><td class="yes">自己建的</td><td class="yes">全部</td></tr>
+      <tr><td><b>领需求</b>里新建需求</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>领走一条需求（= 建一个任务）</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>改 / 关闭别人的需求</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>改 / 关闭自己提的需求</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
     </tbody>
   </table>
 
-  <div class="note">「<b>管理员</b>」与「<b>管理者</b>」是两个角色，名字像、权限相反：管理员什么都能干；管理者<b>只能看两个看板</b>，不参与报任务和改任务。</div>
+  <div class="note">需求的规矩比任务松一档：<b>谁提的谁做主</b>，别人提的也能领去办，但改不了、关不掉。领走一条需求本身就是建一个任务 —— 所以能建任务的人才能领需求。</div>
+
+  <div class="note">「<b>管理员</b>」与「<b>管理者</b>」是两个角色，名字像、权限相反：管理员什么都能干；管理者<b>只能看两个看板，外加「领需求」</b>（他能自己提需求、改自己提的那条，但领不走）—— 不参与报任务和改任务。</div>
 </section>
 
 <!-- ══ ⑧ 常见问题 ═══════════════════════════════════════════════ -->

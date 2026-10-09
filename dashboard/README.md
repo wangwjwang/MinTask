@@ -103,9 +103,12 @@ dashboard/
 - 看板**只读**：`dashboardService` 只 `get()` 不写库，无法改任何小程序数据。
 - 口令是第一道访问控制：未通过校验直接返回错误，前端拿不到任何数据。
 - 前端登录后口令存于 `localStorage`，便于刷新保持会话；退出即清除。
-- 现有 7 个云函数与小程序源码**零改动**，新增的 `dashboardService` 相互独立。
+- 本次新增 `demandService`（需求池）后共 9 个云函数。电脑端看板**不展示需求池**。
+- ★ `dashboardService` **本次不需要重新部署**：它只 require `wx-server-sdk`，
+  完全不使用 `shared/`（有意做成自包含）。`sync-shared.js` 会照灌一份
+  `lib/shared` 进去，但那是死副本，已在 `.gitignore` 里排除。
 
 ## 改动范围确认
 
 - 仅**新增** `dashboard/` 前端项目（与 `miniprogram/` 平级）与 `cloudfunctions/dashboardService/`（只读）。
-- 小程序源码、现有 7 个云函数、云数据库集合结构均**未改动**。
+- 小程序源码、现有云函数、云数据库集合结构均**未改动**（2026-10-09 需求池那一次是另外一批改动，与看板无关）。

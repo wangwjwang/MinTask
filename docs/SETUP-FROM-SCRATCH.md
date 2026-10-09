@@ -49,8 +49,8 @@
 ①  装工具              ②  拿入场券            ③  把项目跑起来
 ─────────────────      ──────────────────    ──────────────────
 Node.js                注册小程序             填 AppID / 环境 ID
-Git for Windows        ↳ 拿到 AppID           部署 7 个云函数
-VS Code                装开发者工具            建 5 个集合 + 索引
+Git for Windows        ↳ 拿到 AppID           部署 9 个云函数
+VS Code                装开发者工具            建 6 个集合 + 索引
 Claude Code            开通云开发              导成员名单
 CC Switch ← DeepSeek   ↳ 拿到环境 ID          导历史任务表
 ```

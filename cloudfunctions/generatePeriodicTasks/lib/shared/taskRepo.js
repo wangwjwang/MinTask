@@ -116,6 +116,7 @@ function applyStageSideEffects(patch, existingTask) {
  * @param {string} [opts.origin]     manual | periodic
  * @param {string} [opts.templateId] 周期生成时来源模板
  * @param {string} [opts.periodKey]  周期生成时所属周期
+ * @param {string} [opts.demandId]   领走时关联的需求 _id
  */
 function buildTaskDoc(opts) {
   const {
@@ -130,6 +131,7 @@ function buildTaskDoc(opts) {
     origin,
     templateId,
     periodKey,
+    demandId,
   } = opts;
 
   const doc = {
@@ -165,6 +167,12 @@ function buildTaskDoc(opts) {
   // 周期任务溯源字段，同时作为幂等键（配合确定性 _id 双重保险）
   if (templateId) doc.templateId = templateId;
   if (periodKey) doc.periodKey = periodKey;
+
+  // ★ 领走溯源：这条任务是从哪条需求来的。
+  //   只在建任务那一刻写入（= 领走），之后主办人改不了 —— 它不在任何
+  //   白名单里，前端传不进来。否则 task-edit 能把任务指向任意一条需求，
+  //   把一个普通任务伪装成"已领走"，那条需求的关联任务数与自动完成判定就全乱了。
+  if (demandId) doc.demandId = demandId;
 
   if (_id) doc._id = _id;
   return doc;

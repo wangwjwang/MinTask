@@ -32,6 +32,11 @@ const {
   mergeCollaboratorSnapshot,
   splitNames,
 } = require('./lib/shared/taskRepo');
+const {
+  claimDemand,
+  releaseDemand,
+  syncDemandQuietly,
+} = require('./lib/shared/demandRepo');
 
 const TASKS = COLLECTIONS.TASKS;
 const MEMBERS = COLLECTIONS.MEMBERS;
@@ -88,6 +93,46 @@ async function rebuildCollaboratorSnapshot(ctx, taskId) {
   return { collaboratorIds: ids, collaborator };
 }
 
+/**
+ * 幂等令牌。
+ *
+ * ★ 前端有两种传法，历史上都出现过：
+ *     ① 放在调用的**顶层**（utils/api.js 的 call 把 opts.clientToken 写在 data 上）
+ *     ② 页面自己塞进 payload 里（progress-add 就是这么干的）
+ *   云函数这一侧过去只认 ②，于是 task-create 传的令牌**从来没生效过** ——
+ *   建任务一直不是幂等的，网络重试会建出两条一模一样的任务。
+ *   需求池让这件事变得危险：重试时第二次 claimDemand 会撞上"已被领走"，
+ *   而那是用户**自己**刚领的，报错信息完全说不通。
+ *   两个都认。
+ */
+function readToken(payload, ctx) {
+  const top = ctx.event && ctx.event.clientToken;
+  return String(top || payload.clientToken || '').slice(0, 64);
+}
+
+/**
+ * 幂等重放：这个令牌对应的任务是否已经建好了。
+ *
+ * ★ 为什么必须挡在 claimDemand **之前**
+ *   网络重试带着同一个令牌再来一次时，需求已经是「已领走」—— 上一次请求
+ *   自己占的。直接进 claimDemand 会撞上"已被领走"并报给用户，而那条需求
+ *   正是他自己刚领的，这句话完全说不通，他会以为被抢了、转头去找别的需求。
+ *   先看一眼令牌，把"重试"从"重复领走"里摘出来。
+ *
+ * ★ 正确性仍然由确定性 _id 兜底（见 shared/idempotency.js）：
+ *   这里只是让正常路径不产生一个"看起来像失败"的中间态，
+ *   真正防重的是 addIdempotent 那次插入。
+ */
+async function findReplay(ctx, token) {
+  if (!token) return null;
+  try {
+    const r = await ctx.db.collection(TASKS).doc(manualTaskId(token)).get();
+    return (r && r.data) || null;
+  } catch (e) {
+    return null; // 查不到是首次提交的常态，不是错误
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 写操作
 // ---------------------------------------------------------------------------
@@ -101,21 +146,38 @@ async function create(payload, ctx) {
   const fields = validate.validateTaskFields(payload.task || {}, { isCreate: true });
   validate.assertTaskRequiredForCreate(fields);
 
+  const token = readToken(payload, ctx);
+  const replay = await findReplay(ctx, token);
+  if (replay) return { _id: replay._id, idempotent: true, task: replay };
+
   const { ids, names } = await resolveCollaborators(
     ctx,
     fields.__rawCollaboratorIds,
     ctx.openid
   );
 
-  return insertTask(ctx, {
-    fields,
-    leaderId: ctx.openid,
-    leaderName: me.name,
-    collaboratorIds: ids,
-    collaboratorNames: names,
-    creatorId: ctx.openid,
-    token: payload.clientToken,
-  });
+  // ★ 顺序：先占位、再建任务。反过来的话，两个人同时点「领走」会双双建成任务，
+  //   而其中一条的 demandId 指向的需求已经被另一个人占走了。
+  //   门禁在最前（requireWriter），管理者走不到这一行。
+  const demandId = await claimDemand(ctx, payload.demandId, ctx.openid);
+
+  try {
+    return await insertTask(ctx, {
+      fields,
+      leaderId: ctx.openid,
+      leaderName: me.name,
+      collaboratorIds: ids,
+      collaboratorNames: names,
+      creatorId: ctx.openid,
+      token,
+      demandId,
+    });
+  } catch (e) {
+    // 占位成功但建任务失败：把需求退回池子，否则它停在「已领走」却一条任务都没有。
+    // releaseDemand 内部吞掉自己的错误，不会盖掉这里要抛给用户的原始错误。
+    await releaseDemand(ctx, demandId, ctx.openid);
+    throw e;
+  }
 }
 
 /**
@@ -133,22 +195,38 @@ async function adminCreate(payload, ctx) {
   const fields = validate.validateTaskFields(payload.task || {}, { isCreate: true });
   validate.assertTaskRequiredForCreate(fields);
 
+  const token = readToken(payload, ctx);
+  const replay = await findReplay(ctx, token);
+  if (replay) return { _id: replay._id, idempotent: true, task: replay };
+
   const { ids, names } = await resolveCollaborators(ctx, fields.__rawCollaboratorIds, leaderId);
 
-  return insertTask(ctx, {
-    fields,
-    leaderId,
-    leaderName: leaderMember.name,
-    collaboratorIds: ids,
-    collaboratorNames: names,
-    creatorId: admin.openid,
-    token: payload.clientToken,
-  });
+  // 领走人是**被指派的主办人**，不是代建的管理员 —— 需求从此归他负责
+  const demandId = await claimDemand(ctx, payload.demandId, leaderId);
+
+  try {
+    return await insertTask(ctx, {
+      fields,
+      leaderId,
+      leaderName: leaderMember.name,
+      collaboratorIds: ids,
+      collaboratorNames: names,
+      creatorId: admin.openid,
+      token,
+      demandId,
+    });
+  } catch (e) {
+    await releaseDemand(ctx, demandId, leaderId);
+    throw e;
+  }
 }
 
 /** create / adminCreate 的公共落库逻辑 */
 async function insertTask(ctx, opts) {
-  const { fields, leaderId, leaderName, collaboratorIds, collaboratorNames, creatorId, token } = opts;
+  const {
+    fields, leaderId, leaderName, collaboratorIds, collaboratorNames,
+    creatorId, token, demandId,
+  } = opts;
 
   const _id = token ? manualTaskId(String(token).slice(0, 64)) : undefined;
   const doc = buildTaskDoc({
@@ -161,6 +239,7 @@ async function insertTask(ctx, opts) {
     db: ctx.db,
     _id,
     origin: ORIGIN.MANUAL,
+    demandId,
   });
 
   if (_id) {
@@ -207,6 +286,15 @@ async function update(payload, ctx) {
 
   patch.updatedAt = ctx.db.serverDate();
   await ctx.db.collection(TASKS).doc(taskId).update({ data: patch });
+
+  /*
+   * 需求状态跟着任务走。★ 失败隔离：包在 syncDemandQuietly 里，
+   * 出错只进日志，绝不把任务保存本身带崩 —— 需求晚一步同步是小事，
+   * 用户辛苦改的一整屏是大事。漏掉的由每日巡检收敛。
+   */
+  if ('stage' in patch && task.demandId) {
+    await syncDemandQuietly(ctx.db, task.demandId);
+  }
 
   return { taskId, patch };
 }
@@ -346,6 +434,10 @@ async function remove(payload, ctx) {
   }
 
   await ctx.db.collection(TASKS).doc(taskId).remove();
+
+  // 任务被删光的需求会回到「待认领」（由重算统一判定，这里不写分支）
+  if (task.demandId) await syncDemandQuietly(ctx.db, task.demandId);
+
   return { taskId, deleted: true, removedRecords: removed };
 }
 

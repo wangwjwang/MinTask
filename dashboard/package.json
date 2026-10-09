@@ -1,0 +1,27 @@
+{
+  "name": "teampulse-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TeamPulse 团队管理看板 · 电脑端可交互展示（三套主题皮肤）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@cloudbase/js-sdk": "^3.10.1",
+    "echarts": "^5.5.1",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^5.4.11"
+  },
+  "optionalDependencies": {
+    "@esbuild/win32-x64": "^0.28.2",
+    "@rollup/rollup-win32-x64-msvc": "^4.64.1"
+  }
+}

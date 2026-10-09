@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeamPulse 使用说明</title>
+<style>
+/* ── 令牌：与小程序 app.wxss 同一套颜色 ───────────────────────────── */
+:root{
+  --bg:#F5F3F1; --card:#FFFFFF; --text:#1A1D24; --text-sub:#5B6270; --muted:#8A8F99;
+  --border:#E9E7E4; --divider:#F2F0ED;
+  --primary:#2563EB; --primary-soft:#E8EFFC;
+  --ok:#12A150; --ok-bg:#E7F7EE;
+  --warn:#D97706; --warn-bg:#FEF4E6;
+  --danger:#DC2626; --danger-bg:#FDECEB;
+  --done:#6B7280; --done-bg:#EEF0F3;
+  --radius:14px; --radius-lg:18px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:16px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+}
+.wrap{max-width:900px;margin:0 auto;padding:0 20px 80px}
+
+/* ── 页头 ────────────────────────────────────────────────────────── */
+.hero{padding:56px 0 28px}
+.hero__tag{font-size:13px;color:var(--muted);letter-spacing:.04em}
+.hero h1{margin:8px 0 10px;font-size:34px;line-height:1.25;font-weight:700}
+.hero__sub{margin:0;color:var(--text-sub)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.toc a{
+  font-size:13px;color:var(--text-sub);text-decoration:none;background:var(--card);
+  border:1px solid var(--border);border-radius:999px;padding:5px 12px;
+}
+.toc a:hover{color:var(--primary);border-color:var(--primary-soft);background:var(--primary-soft)}
+
+/* ── 章节 ────────────────────────────────────────────────────────── */
+section{margin-top:48px}
+h2{font-size:22px;margin:0 0 6px;font-weight:650}
+h2 .num{color:var(--primary);margin-right:8px;font-variant-numeric:tabular-nums}
+h3{font-size:16px;margin:26px 0 8px;font-weight:650}
+p{margin:10px 0}
+.lead{color:var(--text-sub);margin-top:0}
+ul{margin:10px 0;padding-left:20px}
+li{margin:6px 0}
+b{font-weight:650}
+code{background:#EFEDEA;border-radius:5px;padding:1px 5px;font-size:14px}
+.note{
+  background:var(--card);border:1px solid var(--border);border-left:3px solid var(--primary);
+  border-radius:0 var(--radius) var(--radius) 0;padding:12px 16px;margin:16px 0;color:var(--text-sub);font-size:15px;
+}
+.note.warn{border-left-color:var(--warn)}
+
+/* ── 手机示意图 ──────────────────────────────────────────────────── */
+.phone{
+  width:320px;max-width:100%;background:var(--bg);border:1px solid var(--border);
+  border-radius:20px;overflow:hidden;margin:18px 0;
+}
+.phone__nav{
+  background:#fff;border-bottom:1px solid var(--divider);
+  text-align:center;font-size:13px;color:var(--text);padding:9px 0;font-weight:600;
+}
+.phone__body{padding:12px;display:flex;flex-direction:column;gap:10px}
+.phone--solo{margin-left:auto;margin-right:auto}
+
+/* 模拟小程序里的卡片/徽标/进度条 */
+.m-card{background:var(--card);border-radius:var(--radius);padding:12px}
+.m-title{font-size:15px;font-weight:650;line-height:1.35}
+.m-sub{font-size:12px;color:var(--muted)}
+.m-row{display:flex;align-items:center;gap:8px}
+.m-row--between{justify-content:space-between}
+.m-row--wrap{flex-wrap:wrap}
+.m-badge{font-size:11px;line-height:1;padding:4px 8px;border-radius:999px;font-weight:600;white-space:nowrap}
+.m-badge--ok{background:var(--ok-bg);color:var(--ok)}
+.m-badge--warn{background:var(--warn-bg);color:var(--warn)}
+.m-badge--danger{background:var(--danger-bg);color:var(--danger)}
+.m-badge--done,.m-badge--idle{background:var(--done-bg);color:var(--done)}
+.m-badge--active{background:var(--primary-soft);color:var(--primary)}
+.m-tag{font-size:11px;color:var(--muted);background:#F4F3F1;border-radius:6px;padding:4px 7px;white-space:nowrap}
+.m-dot{width:10px;height:10px;border-radius:3px;flex:none}
+.m-progress{height:6px;border-radius:999px;background:var(--divider);overflow:hidden}
+.m-progress>i{display:block;height:100%;border-radius:999px;background:var(--primary)}
+.m-mono{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)}
+.m-divider{height:1px;background:var(--divider)}
+
+/* 带编号批注的示意图 */
+.annot{padding-left:34px;margin:18px 0}
+.annot .m-card{padding:14px}
+.annot__row{position:relative}
+.annot__row+.annot__row{margin-top:10px}
+.anno{
+  position:absolute;left:-30px;top:50%;transform:translateY(-50%);
+  width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;
+  font-size:11px;font-weight:700;display:grid;place-items:center;
+}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin:16px 0;padding:0;list-style:none;font-size:14px;color:var(--text-sub)}
+.legend li{display:flex;gap:9px;margin:0}
+.legend .n{
+  flex:none;width:19px;height:19px;border-radius:50%;background:var(--primary-soft);color:var(--primary);
+  font-size:11px;font-weight:700;display:grid;place-items:center;margin-top:3px;
+}
+
+/* 分段切换 / 胶囊 */
+.m-pills{display:flex;gap:6px;flex-wrap:wrap}
+.m-pill{
+  font-size:12px;color:var(--text-sub);background:var(--card);border-radius:999px;padding:5px 11px;
+}
+.m-pill b{color:var(--text);font-variant-numeric:tabular-nums;margin-left:3px}
+.m-pill--danger{background:var(--danger-bg);color:var(--danger)}
+.m-pill--danger b{color:var(--danger)}
+.m-seg{display:flex;background:var(--card);border-radius:12px;padding:4px}
+.m-seg span{
+  flex:1;text-align:center;font-size:12px;color:var(--muted);padding:7px 4px;border-radius:9px;white-space:nowrap;
+}
+.m-seg b{font-variant-numeric:tabular-nums;margin-left:4px;opacity:.75}
+.m-seg .on{background:var(--primary-soft);color:var(--primary);font-weight:650}
+
+/* 底部 tabBar */
+.tabbar{
+  display:flex;background:#fff;border-top:1px solid var(--divider);
+  padding:7px 0 9px;border-radius:0 0 18px 18px;
+}
+.tabbar>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--muted)}
+.tabbar .on{color:var(--primary);font-weight:600}
+.tabbar svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* 入口行 */
+.m-entry{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:var(--radius);padding:12px 14px}
+.m-entry .t{font-size:14px;font-weight:600}
+.m-entry .s{font-size:12px;color:var(--muted);margin-top:2px}
+.m-entry .arrow{color:var(--muted);font-size:18px;line-height:1}
+
+/* 输入框 */
+.m-field{border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:13px;color:var(--muted);background:#FCFBFA}
+.m-label{font-size:12px;color:var(--text-sub);font-weight:600;margin-bottom:6px}
+.m-btn{border-radius:10px;text-align:center;font-size:13px;font-weight:600;padding:11px 0}
+.m-btn--primary{background:var(--primary);color:#fff}
+.m-btn--plain{background:#F1F3F7;color:var(--text-sub)}
+.m-btn--off{background:#F1F3F7;color:#B8BCC4}
+
+/* ── 两栏对比 / 表格 ─────────────────────────────────────────────── */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+.cols .m-card h4{margin:0 0 8px;font-size:15px}
+.cols .m-card p{margin:0 0 10px;font-size:13.5px;color:var(--text-sub)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;background:var(--card);border-radius:var(--radius);overflow:hidden}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--divider)}
+th{font-size:12.5px;color:var(--text-sub);font-weight:650;background:#FAFAF9}
+tr:last-child td{border-bottom:0}
+td.yes{color:var(--ok);font-weight:700}
+td.no{color:#C9CBD1}
+.nowrap{white-space:nowrap}
+
+/* FAQ */
+details{background:var(--card);border-radius:var(--radius);padding:14px 16px;margin:10px 0}
+details summary{cursor:pointer;font-weight:600;font-size:15px}
+details p{margin:10px 0 0;color:var(--text-sub);font-size:14.5px}
+
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+
+@media (max-width:720px){
+  .legend,.cols{grid-template-columns:1fr}
+  .hero h1{font-size:27px}
+  .annot{padding-left:30px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ══ 页头 ══════════════════════════════════════════════════════ -->
+<header class="hero">
+  <div class="hero__tag">团队任务登记 · 进展上报 · 看板</div>
+  <h1>TeamPulse 使用说明</h1>
+  <p class="hero__sub">微信小程序。给日常使用的同事看的，读完大约 5 分钟。</p>
+  <nav class="toc">
+    <a href="#claim">① 认领姓名</a>
+    <a href="#pages">② 四个页面</a>
+    <a href="#card">③ 看懂任务卡片</a>
+    <a href="#report">④ 上报进展</a>
+    <a href="#create">⑤ 建任务 / 建计划 / 改任务</a>
+    <a href="#board">⑥ 两个看板</a>
+    <a href="#perm">⑦ 谁能改什么</a>
+    <a href="#faq">⑧ 常见问题</a>
+  </nav>
+</header>
+
+<!-- ══ ① 认领 ═══════════════════════════════════════════════════ -->
+<section id="claim">
+  <h2><span class="num">①</span>第一次打开：认领你的姓名</h2>
+  <p class="lead">小程序第一次进入会先让你在全员名单里选中自己，点「确认是我的姓名」。这一步只做一次，之后不再出现。</p>
+  <p>它的作用是把你和小程序里的姓名绑在一起 —— 之后「我的任务」「能不能改这条」全部按这个身份判定。</p>
+
+  <div class="phone phone--solo">
+    <div class="phone__nav">选择你的姓名</div>
+    <div class="phone__body">
+      <div class="m-card">
+        <div class="m-sub">请从下方选择你的姓名。系统用它来判定任务权限 —— 选错会导致你无法修改自己的任务。</div>
+      </div>
+      <div class="m-card m-row">
+        <div class="m-dot" style="background:#3B8391;width:34px;height:34px;border-radius:10px"></div>
+        <div style="flex:1">
+          <div class="m-title" style="font-size:14px">张&nbsp;三</div>
+          <div class="m-sub">研发组</div>
+        </div>
+        <div style="color:var(--primary);font-weight:700">✓</div>
+      </div>
+      <div class="m-card m-row" style="opacity:.62">
+        <div class="m-dot" style="background:#8A8F99;width:34px;height:34px;border-radius:10px"></div>
+        <div style="flex:1">
+          <div class="m-title" style="font-size:14px">李&nbsp;四</div>
+          <div class="m-sub">研发组</div>
+        </div>
+      </div>
+      <div class="m-card m-row" style="opacity:.62">
+        <div class="m-dot" style="background:#8A8F99;width:34px;height:34px;border-radius:10px"></div>
+        <div style="flex:1">
+          <div class="m-title" style="font-size:14px">王&nbsp;五</div>
+          <div class="m-sub">研发组</div>
+        </div>
+      </div>
+      <div class="m-btn m-btn--primary">确认是我的姓名</div>
+    </div>
+  </div>
+
+  <div class="note warn"><b>选姓名前请看清楚。</b>选错的话，你名下没有数据，也改不了自己主办的任务 —— 这种情况找管理员在后台改，自己在小程序里改不了。</div>
+</section>
+
+<!-- ══ ② 四个页面 ═══════════════════════════════════════════════ -->
+<section id="pages">
+  <h2><span class="num">②</span>四个页面</h2>
+  <p class="lead">底部四个页签，分工是「哪一页就做哪一件事」—— 同一张任务卡片，在不同页面点进去的地方不一样。</p>
+
+  <div class="phone phone--solo">
+    <div class="phone__body" style="min-height:120px">
+      <div class="m-card"><div class="m-title">报任务的卡片</div><div class="m-sub">点一下 → 直接进「上报进展」</div></div>
+      <div class="m-card"><div class="m-title">改任务的卡片</div><div class="m-sub">点一下 → 直接进「编辑任务」</div></div>
+      <div class="m-card"><div class="m-title">看板的卡片</div><div class="m-sub">点一下 → 只读的任务详情</div></div>
+    </div>
+    <div class="tabbar">
+      <div class="on">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4.5" width="16" height="16" rx="3"/><path d="M9 3.2h6v3.3H9z"/><path d="M12 10.5v6M9 13.5h6"/></svg>
+        报任务
+      </div>
+      <div>
+        <svg viewBox="0 0 24 24"><path d="M4 20h4L19.2 8.8a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M14.5 6.5l3 3"/></svg>
+        改任务
+      </div>
+      <div>
+        <svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="4.6" height="16" rx="1.6"/><rect x="9.7" y="4" width="4.6" height="11" rx="1.6"/><rect x="15.9" y="4" width="4.6" height="13" rx="1.6"/></svg>
+        任务看板
+      </div>
+      <div>
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.6 19c0-3 2.4-5 5.4-5s5.4 2 5.4 5"/><circle cx="17" cy="9.2" r="2.5"/><path d="M15.2 14.7c2.5.3 4.3 2 4.3 4.3"/></svg>
+        人员看板
+      </div>
+    </div>
+  </div>
+
+  <ul>
+    <li><b>报任务</b> —— 我的任务总览（我主办的 / 我协办的 / 已完成），新建任务也在这里。</li>
+    <li><b>改任务</b> —— 我主办的在办任务，点进去编辑；页面底部还有「管理我的计划」「退出协办」两个入口。</li>
+    <li><b>任务看板</b> —— 全团队的任务，按阶段分段看；只读。</li>
+    <li><b>人员看板</b> —— 每个人的任务负载，点某人看他名下的任务；只读。</li>
+  </ul>
+
+  <div class="note">如果账号是<b>只读的「管理者」</b>，前两个页签会变灰点不动，只有两个看板可用 —— 这是设计如此，不是故障。</div>
+</section>
+
+<!-- ══ ③ 任务卡片 ═══════════════════════════════════════════════ -->
+<section id="card">
+  <h2><span class="num">③</span>看懂任务卡片</h2>
+  <p class="lead">所有列表用的都是同一张卡片，认识一次就够。</p>
+
+  <div class="annot">
+    <div class="m-card">
+      <div class="annot__row m-row m-row--between">
+        <span class="anno">1</span>
+        <div class="m-row" style="flex:1;gap:8px;align-items:flex-start">
+          <span class="m-dot" style="background:#8A3B91;margin-top:5px"></span>
+          <div class="m-title">核心系统季度巡检报告编写</div>
+        </div>
+        <span class="m-tag">监管检查</span>
+      </div>
+
+      <div class="annot__row m-row m-row--wrap" style="gap:6px">
+        <span class="anno">2</span>
+        <span class="m-badge m-badge--warn">有风险</span>
+        <span class="m-badge m-badge--active">进行中</span>
+        <span class="m-badge m-badge--danger">卡壳</span>
+        <span class="m-tag">周期</span>
+      </div>
+
+      <div class="annot__row">
+        <span class="anno">3</span>
+        <div class="m-row m-row--between" style="margin-bottom:5px">
+          <span class="m-sub">进度</span><span class="m-mono">60%</span>
+        </div>
+        <div class="m-progress"><i style="width:60%"></i></div>
+      </div>
+
+      <div class="annot__row m-row m-row--between" style="margin-top:12px">
+        <span class="anno">4</span>
+        <span class="m-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">监管报送 · 主办 王佳 · 协办 李四 等3人</span>
+        <span class="m-mono" style="color:var(--danger)">逾期 2 天</span>
+      </div>
+    </div>
+  </div>
+
+  <ul class="legend">
+    <li><span class="n">1</span><span><b>分类色点 + 任务名</b>，右上角是来源标签（周期生成的任务则显示周期频率）。</span></li>
+    <li><span class="n">2</span><span><b>状态徽标</b>：绿=正常、黄=有风险、红=受阻、灰=已完成；旁边的蓝/灰徽标是阶段。</span></li>
+    <li><span class="n">3</span><span><b>进度条</b>，只有主办人能改。</span></li>
+    <li><span class="n">4</span><span>底行：分类 · 主办 · 协办；右侧是截止时间，<span style="color:var(--danger)">逾期变红</span>、<span style="color:var(--warn)">临期变黄</span>。</span></li>
+  </ul>
+
+  <div class="note warn"><b>卡片左侧出现红色粗边、名字旁挂「卡壳」</b>，表示这条任务有<b>未解决</b>的卡壳。点进任务详情可以「标记已解决」（只能解决自己提的，主办人可以解决任意一条）。</div>
+</section>
+
+<!-- ══ ④ 上报进展 ═══════════════════════════════════════════════ -->
+<section id="report">
+  <h2><span class="num">④</span>上报进展</h2>
+  <p class="lead">在<b>报任务</b>页点任意一张卡片，就进到上报进展页。这是日常用得最多的操作。</p>
+
+  <div class="phone phone--solo">
+    <div class="phone__nav">上报进展（主办）</div>
+    <div class="phone__body">
+      <div class="m-card">
+        <div class="m-title" style="font-size:14px">核心系统季度巡检报告编写</div>
+        <div class="m-row m-row--wrap" style="margin-top:6px;gap:6px">
+          <span class="m-badge m-badge--warn">有风险</span>
+          <span class="m-badge m-badge--active">进行中</span>
+        </div>
+        <div class="m-row m-row--between" style="margin-top:8px">
+          <span class="m-sub">当前进度 60%</span><span class="m-mono">10-25 截止</span>
+        </div>
+      </div>
+
+      <div class="m-card">
+        <div class="m-row m-row--between">
+          <span class="m-label" style="margin:0">进展描述</span>
+          <span class="m-sub">输入法自带语音可直接转文字</span>
+        </div>
+        <div class="m-field" style="margin-top:6px">今天跟监管那边对了一下口径，材料里缺的两个数据已经从运维拿到，明天能出初稿。</div>
+        <div class="m-row m-row--between" style="margin-top:8px">
+          <span class="m-sub">54 / 2000</span>
+          <span class="m-btn m-btn--plain" style="padding:6px 14px">AI 精简</span>
+        </div>
+      </div>
+
+      <div class="m-card">
+        <div class="m-label">卡壳原因（有阻碍才填）</div>
+        <div class="m-field">第三方接口文档一直没给，联调推不动。</div>
+        <div class="m-label" style="margin-top:12px">需要支持</div>
+        <div class="m-field">需要张工协助确认接口字段口径。</div>
+      </div>
+
+      <div class="m-card">
+        <div class="m-label">整体进度：60%</div>
+        <div class="m-progress" style="height:8px"><i style="width:60%"></i></div>
+        <div class="m-sub" style="margin-top:10px">任务状态 / 任务阶段（仅主办人可改）</div>
+      </div>
+
+      <div class="m-btn m-btn--primary">提交进展</div>
+    </div>
+  </div>
+
+  <h3>三个框，至少填一个</h3>
+  <ul>
+    <li><b>进展描述</b> —— 做了什么、现在什么结果。想用语音就<b>长按输入法的麦克风</b>说话，不用装插件。</li>
+    <li><b>卡壳原因</b> —— 有阻碍才填。填了卡片上就会挂「卡壳」，看板一片红色，谁都看得见。</li>
+    <li><b>需要支持</b> —— 需要谁提供什么资源、协助或决策。</li>
+  </ul>
+  <p><b>协办人</b>只填这三个框；进度、状态、阶段由主办人维护，协办的界面里根本不显示。</p>
+
+  <h3>AI 精简：把口语整理成规范的进展</h3>
+  <p>语音或手打的内容常有口语和错别字。点一下「AI 精简」，它会结合当前任务的名称与目标，把话理顺、改掉错别字、压到 50 字左右，同时把「卡壳 / 需要支持」自动分离到对应框里。原文没说的东西它不会编。</p>
+
+  <div class="m-card" style="display:flex;flex-direction:column;gap:10px">
+    <div class="m-row m-row--between"><span class="m-sub">没输入内容时 —— 点不动</span><span class="m-btn m-btn--off" style="padding:6px 14px">AI 精简</span></div>
+    <div class="m-row m-row--between"><span class="m-sub">写了内容 / 改过之后 —— 可点</span><span class="m-btn m-btn--plain" style="padding:6px 14px">AI 精简</span></div>
+    <div class="m-row m-row--between"><span class="m-sub">刚精简完 —— 变「已精简」并置灰，再改一次内容才重新可点</span><span class="m-btn m-btn--off" style="padding:6px 14px">已精简</span></div>
+  </div>
+
+  <div class="note">精简结果会写回输入框，<b>不满意可以直接改</b>，也可以重新写。AI 出问题或没启用时不会挡住你 —— 会提示原因并保留原文，照常提交。</div>
+
+  <h3>提交</h3>
+  <p>提交失败直接重试即可，<b>不会产生重复记录</b> —— 系统按提交令牌去重，网络抖动时反复点也安全。</p>
+</section>
+
+<!-- ══ ⑤ 建 / 改 ════════════════════════════════════════════════ -->
+<section id="create">
+  <h2><span class="num">⑤</span>建任务 / 建计划 / 改任务</h2>
+
+  <h3>新建任务</h3>
+  <p>报任务页最下方「<b>新建任务</b>」入口。表单要填：任务名称、任务详情 / 目标描述、分类、来源，人员（普通同事主办人固定是本人，管理员可以选别人；协办人可多选），以及计划开始 / 截止时间。</p>
+  <p>「任务性质」里选<b>计划性 / 周期性 / 临时性</b>时，只是给这条任务加个标注；另外还能填一个可选的「周期频率」，记下它重复的规律。</p>
+
+  <h3>建周期计划（定期自动生成任务）</h3>
+  <p>要让系统<b>按期自动生成任务</b>（例如「每月写报告」），先把表单里的「任务性质」改成<b>周期性</b> —— 表单会切换成创建一份<b>计划（模板）</b>，按钮也变成「创建计划」。</p>
+
+  <div class="cols">
+    <div class="m-card">
+      <h4>计划 ≠ 任务</h4>
+      <p>建计划时<b>不会</b>立刻产生任务。计划只是一张模板，躺在那里等着按期开工。</p>
+      <p>到了每期开始日，系统自动生成当期任务，任务名 = 计划名前面加上期间（例：<code>2026年10月</code> 写报告）。</p>
+    </div>
+    <div class="m-card">
+      <h4>排期怎么填</h4>
+      <p>先选「多久一次」（每月 / 每季 / 每年），再填<b>期内偏移</b>：</p>
+      <p>每月 → 第几号开始、第几号截止；<br>每季 → 第几个月 + 几号；<br>每年 → 几月 + 几号。</p>
+      <p>生成出来的任务，报进展、改状态与普通任务完全一样。</p>
+    </div>
+  </div>
+
+  <div class="note">计划的归属规则与新建任务一致：<b>谁建的谁管</b>，管理员管全部。改设置或删除只影响以后，<b>已经生成的历史任务一律不动</b>。本期已经过完的时间段不会补生成。</div>
+
+  <h3>改任务</h3>
+  <p>改任务页点卡片 → 编辑：任务名、详情、分类、来源、进度、时间、协办人；最底部是<b>删除该任务</b>（只有主办人和管理员看得到，删除后任务与全部进展记录都无法恢复）。主办人不能换人 —— 要换只能重建。</p>
+  <p>同一个页面底部还有两个入口行：</p>
+  <div class="m-entry" style="margin:8px 0">
+    <div><div class="t">管理我的计划</div><div class="s">周期性计划：看排期、改设置或删除</div></div>
+    <div class="arrow">›</div>
+  </div>
+  <div class="m-entry">
+    <div><div class="t">退出协办</div><div class="s">浏览你参与协办的任务，可自行退出</div></div>
+    <div class="arrow">›</div>
+  </div>
+</section>
+
+<!-- ══ ⑥ 看板 ═══════════════════════════════════════════════════ -->
+<section id="board">
+  <h2><span class="num">⑥</span>两个看板</h2>
+
+  <h3>任务看板 —— 全团队的任务</h3>
+  <div class="phone phone--solo">
+    <div class="phone__nav">任务看板</div>
+    <div class="phone__body">
+      <div class="m-pills">
+        <span class="m-pill">共 <b>61</b> 项</span>
+        <span class="m-pill m-pill--danger">卡壳 <b>3</b></span>
+        <span class="m-pill">逾期 <b>5</b></span>
+      </div>
+      <div class="m-seg">
+        <span>周期性计划<b>4</b></span>
+        <span class="on">进行中<b>24</b></span>
+        <span>已完成<b>12</b></span>
+      </div>
+      <div class="m-card">
+        <div class="m-row">
+          <span class="m-dot" style="background:#3B8391"></span>
+          <span style="flex:1;font-size:13px;font-weight:600">系统研发</span>
+          <span class="m-sub">11</span>
+          <span class="m-sub">▾</span>
+        </div>
+      </div>
+      <div class="m-card">
+        <div class="m-row" style="align-items:flex-start">
+          <span class="m-dot" style="background:#3B5891;margin-top:4px"></span>
+          <span style="font-size:13px;line-height:1.4">核心系统季度巡检报告编写</span>
+        </div>
+        <div class="m-row m-row--wrap" style="gap:6px;margin-top:8px">
+          <span class="m-badge m-badge--warn">有风险</span>
+          <span class="m-badge m-badge--active">进行中</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ul>
+    <li>顶部三个胶囊：任务总数、卡壳数、逾期数 —— 一眼看出整体盘子。</li>
+    <li>中间三个分段：<b>周期性计划 / 进行中 / 已完成</b>。<b>左右滑动列表</b>即可切换分段。</li>
+    <li>「周期性计划」那一段列出的是<b>计划本身</b>（谁建的、什么排期、本期是哪一段），点一行可以查看内容，别人的只读。</li>
+    <li>任务段里按<b>分类分组</b>，组标题带分类色并可折叠，滚过去会吸在顶部。</li>
+    <li>看板是<b>只读</b>的：点卡片只看详情，要改请去改任务页。</li>
+  </ul>
+
+  <h3>人员看板 —— 谁手上多少活</h3>
+  <div class="phone phone--solo">
+    <div class="phone__nav">人员看板</div>
+    <div class="phone__body">
+      <div class="m-card">
+        <div class="m-title">共 10 人</div>
+        <div class="m-sub">已认领 9 · 待认领 1</div>
+      </div>
+      <div class="m-card m-row" style="align-items:flex-start">
+        <div class="m-dot" style="background:var(--primary-soft);color:var(--primary);width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:12px;font-weight:700">张三</div>
+        <div style="flex:1">
+          <div class="m-row" style="gap:6px">
+            <span style="font-size:14px;font-weight:600">张三</span>
+            <span class="m-badge m-badge--active">管理员</span>
+          </div>
+          <div class="m-sub" style="margin-top:4px">5 主办 · 3 协办 · 在办 6 · 已完成 2</div>
+          <div class="m-sub" style="margin-top:4px">近两周：3 条进展</div>
+        </div>
+        <div class="arrow" style="color:var(--muted)">›</div>
+      </div>
+    </div>
+  </div>
+  <p>点任何一位成员，进入他的任务列表（主办 / 协办 / 近两周动态），再点任务看只读详情。<b>未认领</b>的同事点不进去 —— 他还没绑定身份，名下自然没有任务。</p>
+</section>
+
+<!-- ══ ⑦ 权限 ═══════════════════════════════════════════════════ -->
+<section id="perm">
+  <h2><span class="num">⑦</span>谁能改什么</h2>
+  <p class="lead">规则很简单：<b>我的任务我负责，别人的任务我帮忙。</b>界面上看不到的按钮，后台也同样拦得住。</p>
+
+  <table>
+    <thead>
+      <tr><th>操作</th><th class="nowrap">主办人</th><th class="nowrap">协办人</th><th class="nowrap">其他同事</th><th class="nowrap">管理员</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>改进度 / 状态 / 阶段</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>改任务名、分类、时间、协办人</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>上报进展</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>自由加入别人的任务当协办</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>标记卡壳已解决</td><td class="yes">任意一条</td><td class="yes">仅自己提的</td><td class="no">—</td><td class="no">—</td></tr>
+      <tr><td>删除任务</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+      <tr><td>建 / 改 / 停用周期计划</td><td class="yes">自己建的</td><td class="yes">自己建的</td><td class="yes">自己建的</td><td class="yes">全部</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">「<b>管理员</b>」与「<b>管理者</b>」是两个角色，名字像、权限相反：管理员什么都能干；管理者<b>只能看两个看板</b>，不参与报任务和改任务。</div>
+</section>
+
+<!-- ══ ⑧ 常见问题 ═══════════════════════════════════════════════ -->
+<section id="faq">
+  <h2><span class="num">⑧</span>常见问题</h2>
+
+  <details>
+    <summary>报任务页顶上出现「10 天以上没有新进展」，是什么？</summary>
+    <p>你主办或协办的任务里，超过 10 天没人报过进展的会被拎到最上面 —— 位置本身就是提醒，免得它们沉在几十条里。超过 5 条会折起来，点「展开其余 N 项」看全。点任意一行直接进上报页。报了进展它自己就消失了。</p>
+  </details>
+
+  <details>
+    <summary>「自动生成 N 项待跟进」又是什么？</summary>
+    <p>周期计划到点自动生成的任务，落到你头上还没人碰过（没进展、进度 0、还是未开始）。看到了就说明该动了。你一旦上报过进展，它就从这里消失，正常混在「我主办的任务」里。</p>
+  </details>
+
+  <details>
+    <summary>为什么我改不了进度和状态？</summary>
+    <p>因为你是这条任务的<b>协办人</b>。进度、状态、阶段只有主办人能改 —— 协办的界面上这几个框根本不显示。你可以提交进展描述、卡壳和需要支持。</p>
+  </details>
+
+  <details>
+    <summary>任务不见了？</summary>
+    <p>先看是不是落到了「已完成」分组（默认收起，点标题展开）。再看是不是在任务看板的别的分段里。都没有的话，可能是被主办人或管理员删除了。</p>
+  </details>
+
+  <details>
+    <summary>同事在人员看板里点不进去？</summary>
+    <p>他还没认领姓名。让他自己打开一次小程序完成认领，之后管理员在人员看板点「把历史任务关联到已认领的同事」，历史任务的主办 / 协办归属就会补齐。</p>
+  </details>
+
+  <details>
+    <summary>我的名字打错了 / 我想改显示的名字？</summary>
+    <p>小程序里改不了，请联系管理员在后台名单里改。</p>
+  </details>
+</section>
+
+<footer>
+  TeamPulse · 团队任务管理系统（微信小程序端）<br>
+  本说明按当前版本界面编写，功能以小程序实际界面为准。
+</footer>
+
+</div>
+</body>
+</html>

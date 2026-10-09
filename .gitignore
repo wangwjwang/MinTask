@@ -65,3 +65,33 @@ scripts/progress_records.import.json
 scripts/tasks.collabfix.import.json
 # make-collab-each-fix-import.js 生成，同理（还原被写坏的 collaboratorIds）。
 scripts/tasks.colleachfix.import.json
+
+# ── 电脑端看板（dashboard/）：凭据与临时脚本 ──────────────────────────
+# cloudbaserc.json 的 functions.envVariables 里带着 DASHBOARD_PASSCODE
+# 明文 —— 它既是部署配置也是看板访问口令，和上面「密钥与本地配置」同一性质。
+# 要保留一份可提交的模板，就另存 cloudbaserc.example.json 并把口令留空。
+cloudbaserc.json
+# 下面三个是 2026-10-07 联调时的一次性脚本，每个都硬编码了腾讯云
+# SecretId / SecretKey（能操作整个 CloudBase 环境的凭据）。
+# ★ 千万不要 `git add -f`。密钥已经落在文件里了，建议尽早去控制台吊销重建。
+_verify_keys.mjs
+_verify_tcb.mjs
+tp_api.js
+_verify_*.mjs
+# 看板联调脚本（硬编码环境 ID 与访问口令）
+dashboard/tp_test.mjs
+# tcb CLI 的输出转储
+_hosting_list.txt
+
+# ── 云函数依赖锁文件 ──────────────────────────────────────────────────
+# 其余 7 个云函数仓库里都没有锁文件，这里保持一致；
+# 依赖由云端 installDependency 按 package.json 安装。
+cloudfunctions/*/package-lock.json
+
+# ── 第三方工具产物 ────────────────────────────────────────────────────
+.workbuddy/
+.wbapp_*.genie
+
+# ── 生成 tabBar 图标用的临时雪碧图 ────────────────────────────────────
+# 仓库里零引用（scripts/gen-tabbar-icons.js 不读它），图标 PNG 已提交。
+tmp-icon-sheet.png

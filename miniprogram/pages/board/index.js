@@ -56,6 +56,9 @@ const fmt = require('../../utils/format');
 const swipe = require('../../utils/swipe');
 const theme = require('../../utils/theme');
 const toast = require('../../utils/toast');
+
+/** 本页在 custom-tab-bar 的 TABS 里的路径（见 custom-tab-bar/index.js） */
+const TAB_PATH = '/pages/board/index';
 const C = require('../../shared/constants');
 
 /** 默认落在哪个分段。进行中是「现在在发生什么」，最常看 */
@@ -238,14 +241,14 @@ Page({
     this.segmentInitialized = false;
   },
 
-  /** 把选中态告诉自定义 tabBar（见 report/index.js 的同名方法） */
-  syncTabBar(index) {
+  /** 把选中态告诉自定义 tabBar（传路径，不传下标 —— 见 custom-tab-bar/index.js 的 sync） */
+  syncTabBar() {
     const bar = this.getTabBar && this.getTabBar();
-    if (bar && bar.sync) bar.sync(index);
+    if (bar && bar.sync) bar.sync(TAB_PATH);
   },
 
   onShow() {
-    this.syncTabBar(2);
+    this.syncTabBar();
     this.refresh();
   },
 
@@ -261,7 +264,7 @@ Page({
     }
 
     // 身份到手后再同步一次：onShow 那刻 bootstrap 可能还没回来
-    this.syncTabBar(2);
+    this.syncTabBar();
 
     try {
       if (!this.data.allTasks.length) this.setData({ loading: true });

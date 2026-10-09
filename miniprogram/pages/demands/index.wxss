@@ -1,0 +1,61 @@
+/*
+ * pages/demands Tab「领需求」
+ * ★ 卡片是本页专属的形态（需求不是任务，不能塞进 task-card），
+ *   所以样式留在本页；状态徽标复用 app.wxss 的 .badge--{tone}。
+ */
+
+/* 分段与列表之间留出间距。分段本身在 app.wxss（.seg） */
+.demands__seg {
+  margin-bottom: var(--gap);
+}
+
+.demand__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.demand__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+/* 对接人与期望时间：次要信息，一行放不下就换行 */
+.demand__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6rpx 24rpx;
+  margin-top: 14rpx;
+  font-size: var(--fs-sub);
+  color: var(--text-sub);
+}
+
+.demand__reason {
+  margin-top: 12rpx;
+  font-size: var(--fs-caption);
+  line-height: 1.6;
+}
+
+.demand__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6rpx 20rpx;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 2rpx solid var(--divider);
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
+.demand__claimed {
+  color: var(--tone-warn);
+}
+
+.entry-card__hint {
+  margin-top: 8rpx;
+  font-size: var(--fs-caption);
+}

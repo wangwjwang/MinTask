@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "领需求",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "empty-state": "/components/empty-state/index"
+  }
+}

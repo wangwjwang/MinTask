@@ -18,11 +18,22 @@ const auth = require('../utils/auth');
 const toast = require('../utils/toast');
 
 /**
- * 四个页签。write 标记"这一页是在写业务数据"——
+ * 五个页签。write 标记"这一页是在写业务数据"——
  * 只读角色点它没有意义，所以置灰。
- * ★ 顺序必须与 app.json 的 tabBar.list 完全一致（下标就是选中态）。
+ * ★ 顺序仍必须与 app.json 的 tabBar.list 一致（两处顺序不一致时，
+ *   页签的展示顺序与微信路由器认的顺序会对不上）。
+ *   但选中态已经不靠下标了：sync 按 pagePath 找，见下面的方法注释。
  */
 const TABS = [
+  /*
+   * ★ write 的含义是「管理者能不能用这一格」——
+   *   sync() 会把它翻译成 disabled，对管理者置灰。
+   *   「领需求」是 write: false：管理者能看、也能新建需求。
+   *   他领不走（领走 = 建任务，那条路仍走 requireWriter），
+   *   但"进不去这一页"和"进去了有些事做不了"是两回事 ——
+   *   前者会让整个需求池对他消失，那不是本次放开的宽度。
+   */
+  { pagePath: '/pages/demands/index', text: '领需求', icon: 'demand', write: false },
   { pagePath: '/pages/report/index', text: '报任务', icon: 'report', write: true },
   { pagePath: '/pages/update/index', text: '改任务', icon: 'update', write: true },
   { pagePath: '/pages/board/index', text: '任务看板', icon: 'board', write: false },
@@ -37,19 +48,30 @@ Component({
   },
 
   attached() {
-    this.sync(this.data.selected);
+    // 没有路径可传：这一趟只是把 tabs 渲染出来（含按下角色算好的 disabled），
+    // 选中态等页面 onShow 推过来。首次落 0 是刻意的兜底。
+    this.sync();
   },
 
   methods: {
     /**
-     * 由页面调用：告诉 tabBar 当前在哪一栏。
-     * ★ 角色可能比页面数据晚到（app.onLaunch 的 bootstrap 是异步的），
-     *   所以页面在拿到身份后会再同步一次 —— 这里每次都重算 disabled。
+     * 同步选中态。
+     *
+     * ★ 参数是**页面路径**，不是下标。
+     *   过去四个 tab 页各自硬编码了自己的下标（0/1/2/3，共 8 处调用），
+     *   在头部插入一格会让这 8 处全部错位 —— 而错位的表现是"点进 A 页面、
+     *   B 页签亮着"：一个不报错、但一眼就能看出不对的 bug。
+     *   改成按路径找下标之后，下次再加 tab 也不用再手改任何一个数字。
+     *
+     * ★ 路径记在实例上：Component 的 attached 早于任何页面调它，
+     *   那一次没有路径可传，得沿用上一次（首次为空串 → findIndex 得 -1 → 0）。
      */
-    sync(selected) {
+    sync(pagePath) {
+      if (pagePath) this._pagePath = pagePath;
       const isViewer = auth.isViewer();
       const tabs = TABS.map((t) => Object.assign({}, t, { disabled: isViewer && t.write }));
-      this.setData({ selected: selected || 0, tabs });
+      const i = TABS.findIndex((t) => t.pagePath === this._pagePath);
+      this.setData({ selected: i < 0 ? 0 : i, tabs });
     },
 
     onTap(e) {

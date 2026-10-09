@@ -26,6 +26,9 @@ const auth = require('../../utils/auth');
 const api = require('../../utils/api');
 const toast = require('../../utils/toast');
 
+/** 本页在 custom-tab-bar 的 TABS 里的路径（见 custom-tab-bar/index.js） */
+const TAB_PATH = '/pages/report/index';
+
 /**
  * 按阶段把任务拆成「在办 / 已完成」两组。
  * 已完成的任务不需要再报进度，混在列表里只会干扰。
@@ -204,12 +207,14 @@ Page({
 
   /**
    * 把选中态告诉自定义 tabBar（app.json 里 tabBar.custom = true）。
+   * ★ 传的是本页**路径**，不是下标 —— tabBar 按路径找选中项，
+   *   以后在头部插一格也不会让哪个页签亮错（见 custom-tab-bar/index.js 的 sync）。
    * ★ getTabBar() 在极早期可能还没有组件实例，所以要判空 ——
    *   漏了会在启动瞬间抛错，而页面本身是好的，那种错很难查。
    */
-  syncTabBar(index) {
+  syncTabBar() {
     const bar = this.getTabBar && this.getTabBar();
-    if (bar && bar.sync) bar.sync(index);
+    if (bar && bar.sync) bar.sync(TAB_PATH);
   },
 
   onShow() {
@@ -223,7 +228,7 @@ Page({
       return;
     }
 
-    this.syncTabBar(0);
+    this.syncTabBar();
 
     /*
      * ★ 每次进入本页都让提醒区回到折起状态。
@@ -253,7 +258,7 @@ Page({
 
     // 身份到手后再同步一次 tabBar：onShow 那一刻 bootstrap 可能还没回来，
     // 角色读不到就会把两个只读页签画成可点的
-    this.syncTabBar(0);
+    this.syncTabBar();
 
     this.setData({
       myOpenid: session.openid,

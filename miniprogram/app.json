@@ -14,7 +14,8 @@
     "pages/task-edit/index",
     "pages/task-detail/index",
     "pages/person-detail/index",
-    "pages/demand-edit/index"
+    "pages/demand-edit/index",
+    "pages/demands/index"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -30,6 +31,12 @@
     "backgroundColor": "#FFFFFF",
     "borderStyle": "black",
     "list": [
+      {
+        "pagePath": "pages/demands/index",
+        "text": "领需求",
+        "iconPath": "images/tabbar/demand.png",
+        "selectedIconPath": "images/tabbar/demand-on.png"
+      },
       {
         "pagePath": "pages/report/index",
         "text": "报任务",

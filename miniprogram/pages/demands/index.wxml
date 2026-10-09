@@ -1,0 +1,94 @@
+<!--
+  pages/demands Tab「领需求」
+
+  ★ 结构照 pages/board：信息块 → 分段切换 → 单一纵向列表 → 底部入口卡。
+  ★ 支持横向滑动切换分段（判据在 utils/swipe.js，与任务看板共用一份实现）。
+  ★ 分段标签是 3 个汉字 + 一位计数，共 4 项 —— 若在开发者工具里看到挤，
+    把计数挪到分段上方的胶囊行里（任务看板已有 .pill 那种写法），
+    **不要压字号**（见 spec §3）。
+-->
+<view
+  class="page page--tabbar"
+  bindtouchstart="onTouchStart"
+  bindtouchmove="onTouchMove"
+  bindtouchcancel="onTouchCancel"
+  bindtouchend="onTouchEnd"
+>
+
+  <!-- ── 信息块：这一屏回答"池子里还有多少事没人接" ─────────────── -->
+  <view class="summary">
+    <view class="summary__value">
+      {{stats.pending}}<text class="summary__unit">条等着认领</text>
+    </view>
+    <view class="summary__stats">
+      <text>我领的 {{stats.mine}}</text>
+      <text>我提的 {{stats.proposed}}</text>
+    </view>
+  </view>
+
+  <!-- ── 分段切换（带计数，支持左右滑）─────────────────────────── -->
+  <view class="seg demands__seg">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="seg"
+      class="seg__item {{segmentTab === item.seg ? 'seg__item--on' : ''}} hit"
+      data-segment="{{item.seg}}"
+      bindtap="onSegmentTap"
+    >
+      <text>{{item.seg}}</text>
+      <text class="seg__count">{{item.count}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-block">正在加载需求池…</view>
+
+  <block wx:else>
+    <view wx:if="{{rows.length}}">
+      <view
+        wx:for="{{rows}}"
+        wx:for-item="d"
+        wx:key="_id"
+        class="card demand hit"
+        data-demand="{{d}}"
+        bindtap="onCardTap"
+      >
+        <view class="demand__head">
+          <text class="demand__title">{{d.title}}</text>
+          <text class="badge badge--{{d._statusTone}}">{{d._statusText}}</text>
+        </view>
+
+        <view wx:if="{{d._contactText || d._expectText}}" class="demand__meta">
+          <text wx:if="{{d._contactText}}">{{d._contactText}}</text>
+          <text wx:if="{{d._expectText}}" class="t-mono">{{d._expectText}}</text>
+        </view>
+
+        <!-- 已关闭的那一段，把关闭原因摆出来 —— 它是"为什么不做"的唯一记录 -->
+        <view wx:if="{{d.status === '已关闭' && d.closeReason}}" class="t-muted demand__reason">
+          {{d.closeReason}}
+        </view>
+
+        <view class="demand__foot">
+          <text>{{d.proposerName || '—'}} 提出</text>
+          <text>{{d._createdText}}</text>
+          <text wx:if="{{d.claimedByName}}" class="demand__claimed">已由 {{d.claimedByName}} 领走</text>
+        </view>
+      </view>
+    </view>
+
+    <empty-state wx:else title="{{empty.title}}" hint="{{empty.hint}}" />
+
+    <!--
+      新建需求入口。★ 摆在列表**之后**（与报任务的「新加入协办」入口卡同款）：
+        摆在列表前会把第一张卡片顶到屏幕外，而这一段的列表才是主角。
+    -->
+    <view class="card card--flat entry-card hit" bindtap="onNewTap">
+      <view class="row row--between">
+        <view class="flex-1">
+          <text class="t-title">新建需求</text>
+          <view class="t-muted entry-card__hint">还没成形的事先记在这里，等有人认领</view>
+        </view>
+        <text class="field__arrow">›</text>
+      </view>
+    </view>
+  </block>
+</view>

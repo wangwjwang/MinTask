@@ -174,9 +174,13 @@ const memberApi = {
 };
 
 const taskApi = {
-  create: (task, clientToken) => call(config.functions.task, 'create', { task }, { clientToken }),
-  adminCreate: (leaderId, task, clientToken) =>
-    call(config.functions.task, 'adminCreate', { leaderId, task }, { clientToken }),
+  // ★ demandId 非空表示这次建任务是"从需求池领走一条需求"。
+  //   传空串而不是不传：云函数的 claimDemand 对空值直接放行，
+  //   少一种"字段时有时无"的形态。
+  create: (task, clientToken, demandId) =>
+    call(config.functions.task, 'create', { task, demandId: demandId || '' }, { clientToken }),
+  adminCreate: (leaderId, task, clientToken, demandId) =>
+    call(config.functions.task, 'adminCreate', { leaderId, task, demandId: demandId || '' }, { clientToken }),
   update: (taskId, patch) => call(config.functions.task, 'update', { taskId, patch }),
   join: (taskId) => call(config.functions.task, 'join', { taskId }),
   leave: (taskId) => call(config.functions.task, 'leave', { taskId }),
@@ -219,6 +223,25 @@ const aiApi = {
 };
 
 /**
+ * 需求池（demands）。
+ * ★ 这是唯一一个"管理者"也能写的域 —— 服务端走 requireMember 而非
+ *   requireWriter，写权限由 shared/perm.js 的 canEditDemand 判定。
+ *   前端不复制那份判断，页面直接用 perm.canEditDemand（同一个函数）。
+ */
+const demandApi = {
+  list: () => call(config.functions.demand, 'list'),
+  /**
+   * 读一条需求 + 它的关联任务。不存在时 demand 为 null，不抛错 ——
+   * 列表是几秒前拉的，点开时刚被别人删掉是正常竞态。
+   */
+  get: (demandId) => call(config.functions.demand, 'get', { demandId }),
+  create: (demand) => call(config.functions.demand, 'create', { demand }),
+  update: (demandId, patch) => call(config.functions.demand, 'update', { demandId, patch }),
+  close: (demandId, closeReason) => call(config.functions.demand, 'close', { demandId, closeReason }),
+  reopen: (demandId) => call(config.functions.demand, 'reopen', { demandId }),
+};
+
+/**
  * 周期计划（periodic_templates）。
  * ★ 这里的 template 就是用户看到的「计划」—— 建它的入口在新建任务页
  *   选「任务性质 = 周期性」时，不是另一套管理后台。
@@ -254,6 +277,7 @@ module.exports = {
   taskApi,
   progressApi,
   aiApi,
+  demandApi,
   templateApi,
   notifyApi,
 };

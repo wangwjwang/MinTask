@@ -21,6 +21,7 @@ module.exports = {
     task: 'taskService',
     progress: 'progressService',
     template: 'templateService',
+    demand: 'demandService',
     ai: 'callAI',
     notify: 'notifyService',
     periodic: 'generatePeriodicTasks',

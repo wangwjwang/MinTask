@@ -302,6 +302,44 @@ function decoratePlans(plans, today) {
   return (plans || []).map((p) => decoratePlan(p, today));
 }
 
+// ── 需求（demands）────────────────────────────────────────────────────────
+
+/**
+ * 给一条需求补上展示用的派生字段。
+ *
+ * ★ 放在 format.js 而不是各页面里：需求池列表与需求详情都要回答
+ *   "这条需求现在什么状态、对接的是谁、什么时候提的"，
+ *   两处各写一份迟早会一个说"待认领"、另一个已经显示领走人了。
+ *
+ * ★ 状态色取自 C.DEMAND_STATUS_TONE，认不出的状态兜底 'idle' ——
+ *   与 statusTone/stageTone 完全同款：新状态还没加进枚举时，
+ *   界面显示成中性灰而不是没有颜色。
+ */
+function decorateDemand(d) {
+  if (!d) return d;
+
+  // 对接部门与对接人拼一行；两个都没有时给空串，让模板整行不渲染
+  const contact = [d.contactDept, d.contactName].map((s) => String(s || '').trim()).filter(Boolean);
+
+  return Object.assign({}, d, {
+    _statusTone: C.DEMAND_STATUS_TONE[d.status] || 'idle',
+    _statusText: d.status || '',
+    _contactText: contact.join(' · '),
+    // '期望 10月31日' / '' —— 前缀在 JS 里拼，模板不做字符串拼接
+    _expectText: d.expectDate ? `期望 ${dates.friendlyDate(d.expectDate)}` : '',
+    /**
+     * 提出时间用 timeAgo（"刚刚 / 3 天前 / 10月5日"）而不是绝对日期：
+     * 需求卡上要回答的是"这条放了多久了"，不是"哪一天提的"。
+     */
+    _createdText: timeAgo(d.createdAt),
+  });
+}
+
+/** 批量装饰需求 */
+function decorateDemands(list) {
+  return (list || []).map(decorateDemand);
+}
+
 module.exports = {
   STALE_DAYS,
   statusTone,
@@ -320,4 +358,6 @@ module.exports = {
   decorateTasks,
   decoratePlan,
   decoratePlans,
+  decorateDemand,
+  decorateDemands,
 };

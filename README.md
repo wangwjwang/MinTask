@@ -293,13 +293,16 @@ node scripts/make-member-import.js
 
 ### 3.7 部署云函数
 
-在开发者工具左侧 `cloudfunctions` 目录下，**逐个**右键以下 7 个函数 →
+在开发者工具左侧 `cloudfunctions` 目录下，**逐个**右键以下 8 个函数 →
 **上传并部署：云端安装依赖**：
 
 ```
 memberService   taskService   progressService   templateService
-generatePeriodicTasks   callAI   notifyService
+generatePeriodicTasks   callAI   notifyService   demandService
 ```
+
+> `dashboardService`（电脑端看板）不在这份清单里 —— 它只 require `wx-server-sdk`、
+> 不使用 `shared/`，部署方式见 [dashboard/README.md](dashboard/README.md)。
 
 上传完成后，在云开发控制台 → **云函数**，为以下函数调整配置：
 
@@ -309,6 +312,7 @@ generatePeriodicTasks   callAI   notifyService
 | `callAI` | **20 秒** | 256 MB | 内部 HTTP 超时 8 秒，留出云函数冷启动余量 |
 | `memberService` | **20 秒** | 256 MB | 见下：认领时要顺带关联历史数据，不是单文档操作 |
 | `templateService` | **60 秒** | 256 MB | 单文档增删改 3 秒够用，但 `create` / `generateNow` 会顺带生成本期任务 |
+| `demandService` | 默认 3 秒 | 256 MB | 每次都是几次查询 + 一次写入，10 人规模够用 |
 | 其余函数 | 默认 3 秒 | 256 MB | 都是单文档操作，够用 |
 
 > ★ **`templateService` 现在按 60 秒配，是给以后留的余量。**

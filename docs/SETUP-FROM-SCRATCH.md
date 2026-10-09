@@ -285,12 +285,15 @@ module.exports = {
 
 ### 3.3 部署云函数
 
-开发者工具左侧展开 `cloudfunctions` 目录，**逐个**右键下面 7 个函数：
+开发者工具左侧展开 `cloudfunctions` 目录，**逐个**右键下面 8 个函数：
 
 ```
 memberService   taskService   progressService   templateService
-generatePeriodicTasks   callAI   notifyService
+generatePeriodicTasks   callAI   notifyService   demandService
 ```
+
+> `dashboardService` 不在这份清单里 —— 它是可选的电脑端看板云函数，
+> 只 require `wx-server-sdk`、不使用 `shared/`，见 `dashboard/README.md`。
 
 选择 **「上传并部署：云端安装依赖」**。
 
@@ -343,18 +346,18 @@ generatePeriodicTasks   callAI   notifyService
 > 先 `node scripts/sync-shared.js` 把副本写进各云函数目录，
 > 再右键部署对应函数。少任何一步都不生效。
 >
-> 因为 `sync-shared.js` 会改 7 个云函数目录里的文件，
-> 保险做法是全部重新部署一遍（7 个，一分钟的事），
+> 因为 `sync-shared.js` 会改 8 个云函数目录里的文件，
+> 保险做法是全部重新部署一遍（8 个，一分钟的事），
 > 而不是去猜"用到的是哪个"。
 
 ### 3.4 建集合、安全规则、索引
 
-**① 建 5 个集合**
+**① 建 6 个集合**
 
 云开发控制台 → 数据库 → 「+ 新建集合」，名字必须完全一致（区分大小写）：
 
 ```
-members    tasks    progress_records    periodic_templates    job_logs
+members    tasks    progress_records    periodic_templates    job_logs    demands
 ```
 
 **② 配安全规则**
@@ -364,7 +367,7 @@ members    tasks    progress_records    periodic_templates    job_logs
 | 集合 | 安全规则 |
 |---|---|
 | `members` / `tasks` / `progress_records` | `{"read": true, "write": false}` |
-| `periodic_templates` / `job_logs` | `{"read": false, "write": false}` |
+| `periodic_templates` / `job_logs` / `demands` | `{"read": false, "write": false}` |
 
 > ★ **不要选「仅创建者可读写」**。云函数写入的记录不带 `_openid` 字段
 > （那个字段只有小程序端 SDK 直接写入时才自动加），
@@ -386,6 +389,9 @@ members    tasks    progress_records    periodic_templates    job_logs
 | `tasks` | `collaboratorIds` + `stage` | 否 |
 | `tasks` | `stage` + `category` | 否 |
 | `progress_records` | `taskId` + `updatedAt`（降序） | 否 |
+| `demands` | `status` | 否 |
+| `demands` | `proposerId` | 否 |
+| `demands` | `claimedById` | 否 |
 
 > 两个 `members` 唯一索引**必须在导入名单前建好**，
 > 否则重复姓名导进去之后清理起来很麻烦。

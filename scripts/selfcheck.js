@@ -767,7 +767,201 @@ await taskRepo.relinkMemberData(d4, { 查无此人: 'o-x' });
 check('名单里没有的姓名不做任何事', d4.writes.length, 0);
 }
 
-relinkChecks().then(() => {
+/**
+ * 内存版 db，只实现 demandRepo 用到的方法。
+ *
+ * ★ 断言的是「最终文档长什么样」与「stats.updated 是多少」，
+ *   不是"调了几次 update"—— 后者在覆盖了不该覆盖的字段时照样能通过。
+ * ★ where().update() 返回命中条数（而不是恒定 1），是这套测试的关键：
+ *   claimDemand 的原子性就建立在 stats.updated === 1 这个判断上。
+ *   真库靠单文档更新的原子性保证同一时刻只有一个人拿到 1，这里用内存模拟。
+ */
+function demandDb(seed) {
+  const store = {
+    demands: (seed && seed.demands) || [],
+    tasks: (seed && seed.tasks) || [],
+  };
+  const writes = [];
+  const match = (doc, where) => Object.keys(where).every((k) => doc[k] === where[k]);
+  function query(name, ops) {
+    const api = {
+      where: (w) => query(name, Object.assign({}, ops, { where: w })),
+      orderBy: () => api,
+      field: () => api,
+      skip: (n) => query(name, Object.assign({}, ops, { skip: n })),
+      limit: (m) => query(name, Object.assign({}, ops, { limit: m })),
+      get: async () => {
+        let rows = store[name].slice();
+        if (ops.where) rows = rows.filter((d) => match(d, ops.where));
+        if (ops.skip) rows = rows.slice(ops.skip);
+        if (ops.limit !== undefined) rows = rows.slice(0, ops.limit);
+        return { data: rows };
+      },
+      update: async ({ data }) => {
+        let rows = store[name];
+        if (ops.where) rows = rows.filter((d) => match(d, ops.where));
+        rows.forEach((d) => Object.assign(d, data));
+        writes.push({ name, where: ops.where, data });
+        return { stats: { updated: rows.length } };
+      },
+    };
+    return api;
+  }
+  return {
+    writes,
+    store,
+    serverDate: () => 'SERVER_DATE',
+    collection(name) {
+      const c = query(name, {});
+      c.doc = (id) => ({
+        get: async () => {
+          const d = store[name].find((x) => x._id === id);
+          // 与真库一致：文档不存在时抛错，由 readDemand 翻译成 null
+          if (!d) throw Object.assign(new Error('document.get:fail not exist'), { errCode: -502002 });
+          return { data: d };
+        },
+        update: async ({ data }) => {
+          const d = store[name].find((x) => x._id === id);
+          if (!d) return { stats: { updated: 0 } };
+          Object.assign(d, data);
+          writes.push({ name, id, data });
+          return { stats: { updated: 1 } };
+        },
+        remove: async () => ({ stats: { removed: 1 } }),
+      });
+      c.add = async ({ data }) => {
+        const _id = 'id-' + (store[name].length + 1);
+        store[name].push(Object.assign({ _id }, data));
+        return { _id };
+      };
+      return c;
+    },
+  };
+}
+
+async function demandRepoChecks(repo) {
+  const NEW_DEMAND = () => ({
+    _id: 'd1', title: '和财富部聊权益', detail: '', contactDept: '', contactName: '',
+    expectDate: '', status: '待认领', proposerId: 'o-zhang', proposerName: '张三',
+    claimedById: '', claimedByName: '', claimedAt: null,
+    closedByName: '', closedAt: null, closeReason: '', createdAt: 'C', updatedAt: 'C',
+  });
+  const NEW_TASK = (id, stage) => ({ _id: id, demandId: 'd1', stage });
+
+  // ① buildDemandDoc：新需求一律「待认领」，派生字段全部由服务端定
+  const doc = repo.buildDemandDoc({
+    fields: { title: '和财富部聊权益', detail: '', contactDept: '财富部', contactName: '王主任', expectDate: '2026-10-31' },
+    proposerId: 'o-zhang', proposerName: '张三', db: { serverDate: () => 'SERVER_DATE' },
+  });
+  check('新建需求的状态固定为待认领', doc.status, '待认领');
+  check('提出人 openid 由服务端写入', doc.proposerId, 'o-zhang');
+  check('领走人字段初始为空', [doc.claimedById, doc.claimedByName, doc.claimedAt], ['', '', null]);
+  check('关闭痕迹字段初始为空', [doc.closedByName, doc.closedAt, doc.closeReason], ['', null, '']);
+  check('★ 前端字段之外的东西进不来', Object.keys(doc).sort(), [
+    'claimedAt', 'claimedById', 'claimedByName', 'closeReason', 'closedAt', 'closedByName',
+    'contactDept', 'contactName', 'createdAt', 'detail', 'expectDate', 'proposerId',
+    'proposerName', 'status', 'title', 'updatedAt',
+  ].sort());
+
+  // ② claimDemand：条件里必须带 status，且以 stats.updated 为准
+  const d1 = demandDb({ demands: [NEW_DEMAND()], tasks: [] });
+  const ctxOf = (db, openid, members) => ({
+    db, openid,
+    resolveMembers: async (ids) => (members || []).filter((m) => ids.indexOf(m.openid) !== -1),
+  });
+  const ctx = ctxOf(d1, 'o-li', [{ openid: 'o-li', name: '李四', role: '普通' }]);
+
+  check('无 demandId 时原样返回空串（不查库）', await repo.claimDemand(ctx, '', 'o-li'), '');
+  check('领走后返回 demandId', await repo.claimDemand(ctx, 'd1', 'o-li'), 'd1');
+  check('需求转为已领走', d1.store.demands[0].status, '已领走');
+  check('★ 领走人存的是 openid（判据）', d1.store.demands[0].claimedById, 'o-li');
+  check('领走人姓名是快照', d1.store.demands[0].claimedByName, '李四');
+  check('领走时间被写上', d1.store.demands[0].claimedAt, 'SERVER_DATE');
+
+  // ③ 第二次领走必须失败 —— 这就是并发场景下"只有一个人拿到 updated===1"
+  let secondErr = null;
+  try {
+    await repo.claimDemand(ctxOf(d1, 'o-wang', [{ openid: 'o-wang', name: '王五', role: '普通' }]), 'd1', 'o-wang');
+  } catch (e) { secondErr = e; }
+  check('★ 已被领走的需求不能再被领走', secondErr && secondErr.code, 'INVALID_PARAM');
+  check('★ 领走人没有被第二个人改写', d1.store.demands[0].claimedById, 'o-li');
+
+  // ④ 领走不存在的需求：报的是"不存在"，不是"已被领走"
+  let missingErr = null;
+  try {
+    await repo.claimDemand(ctxOf(demandDb({ demands: [] }), 'o-li', [{ openid: 'o-li', name: '李四', role: '普通' }]), 'd-nope', 'o-li');
+  } catch (e) { missingErr = e; }
+  check('★ 需求不存在说"不存在"，不笼统说"已被领走"', missingErr && missingErr.message.indexOf('不存在') !== -1, true);
+
+  // ⑤ releaseDemand：只回滚自己占的那一条，且永不抛错
+  const d2 = demandDb({ demands: [Object.assign(NEW_DEMAND(), { status: '已领走', claimedById: 'o-li', claimedByName: '李四' })], tasks: [] });
+  await repo.releaseDemand(ctxOf(d2, 'o-li', []), 'd1', 'o-wang'); // 不是自己占的
+  check('★ 不是自己占的，回滚不动它', d2.store.demands[0].status, '已领走');
+  await repo.releaseDemand(ctxOf(d2, 'o-li', []), 'd1', 'o-li');
+  check('自己占的回滚成待认领', d2.store.demands[0].status, '待认领');
+  check('回滚时清空领走人', [d2.store.demands[0].claimedById, d2.store.demands[0].claimedByName], ['', '']);
+  let releaseErr = null;
+  try {
+    const broken = demandDb({ demands: [NEW_DEMAND()], tasks: [] });
+    broken.collection = () => { throw new Error('数据库炸了'); };
+    await repo.releaseDemand(broken, 'd1', 'o-li');
+  } catch (e) { releaseErr = e; }
+  check('★ 回滚失败不抛错（不能盖掉原始错误）', releaseErr, null);
+
+  // ⑥ syncDemandStatus 的四种输入
+  const cases = [
+    ['全部任务已完成 → 已完成', [NEW_TASK('t1', '已完成'), NEW_TASK('t2', '已完成')], '已领走', '已完成'],
+    ['部分未完成 → 已领走', [NEW_TASK('t1', '已完成'), NEW_TASK('t2', '进行中')], '已完成', '已领走'],
+    ['零任务 → 待认领', [], '已领走', '待认领'],
+    ['★ 已关闭 → 原样不动', [NEW_TASK('t1', '已完成')], '已关闭', '已关闭'],
+  ];
+  for (const [label, tasks, from, want] of cases) {
+    const db = demandDb({ demands: [Object.assign(NEW_DEMAND(), { status: from, claimedById: 'o-li', claimedByName: '李四' })], tasks });
+    const r = await repo.syncDemandStatus(db, 'd1');
+    check(label, [r.status, db.store.demands[0].status], [want, want]);
+  }
+
+  // ⑦ 零任务时还要清空领走人 —— 否则需求卡在"已领走但没人办"
+  const dz = demandDb({ demands: [Object.assign(NEW_DEMAND(), { status: '已领走', claimedById: 'o-li', claimedByName: '李四' })], tasks: [] });
+  await repo.syncDemandStatus(dz, 'd1');
+  check('★ 任务被删光后清空领走人', [dz.store.demands[0].claimedById, dz.store.demands[0].claimedByName], ['', '']);
+
+  // ⑧ 状态没变时不写库（每日巡检几百条，全写一遍是白费）
+  const dsame = demandDb({ demands: [Object.assign(NEW_DEMAND(), { status: '已领走' })], tasks: [NEW_TASK('t1', '进行中')] });
+  const same = await repo.syncDemandStatus(dsame, 'd1');
+  check('状态没变时 changed=false', same.changed, false);
+  check('★ 状态没变时一次 update 都不发', dsame.writes.length, 0);
+
+  // ⑨ 重开：已关闭的需求要能被重算（其余情况下已关闭是纹丝不动的）
+  const dre = demandDb({ demands: [Object.assign(NEW_DEMAND(), { status: '已关闭', closeReason: '不做了' })], tasks: [] });
+  const re = await repo.syncDemandStatus(dre, 'd1', { fromReopen: true });
+  check('★ 重开：零任务 → 回到待认领', [re.status, dre.store.demands[0].status], ['待认领', '待认领']);
+  check('★ 重开：清掉关闭痕迹', [dre.store.demands[0].closeReason, dre.store.demands[0].closedAt], ['', null]);
+  const dre2 = demandDb({ demands: [Object.assign(NEW_DEMAND(), { status: '已关闭', closeReason: '不做了', claimedById: 'o-li', claimedByName: '李四' })], tasks: [NEW_TASK('t1', '进行中')] });
+  const re2 = await repo.syncDemandStatus(dre2, 'd1', { fromReopen: true });
+  check('★ 重开：有未完成的任务 → 回已领走（不把领走事实抹掉）', re2.status, '已领走');
+  check('★ 重开：不清空领走人', dre2.store.demands[0].claimedById, 'o-li');
+
+  // ⑩ 不存在的需求：skipped，不抛错
+  const dgone = demandDb({ demands: [], tasks: [] });
+  check('需求不存在时返回 skipped', await repo.syncDemandStatus(dgone, 'd-x'), { skipped: 'missing' });
+
+  // ⑪ 巡检：一次扫全量，已关闭的跳过，只报变化的条数
+  const dall = demandDb({
+    demands: [
+      Object.assign(NEW_DEMAND(), { _id: 'a', status: '已领走' }),
+      Object.assign(NEW_DEMAND(), { _id: 'b', status: '已关闭' }),
+      Object.assign(NEW_DEMAND(), { _id: 'c', status: '待认领' }),
+    ],
+    tasks: [NEW_TASK('t1', '已完成')],
+  });
+  const all = await repo.syncAllDemands(dall);
+  check('巡检扫描全部需求', all.scanned, 3);
+  check('只有状态真的变了的才计数（a 零任务→待认领；c 本就待认领→不变）', all.changed, 1);
+  check('★ 已关闭的那条不受巡检影响', dall.store.demands[1].status, '已关闭');
+}
+
+relinkChecks().then(async () => {
   section('协办人姓名快照重建 — 未认领的姓名不能被抹掉');
 
   /*
@@ -882,6 +1076,12 @@ relinkChecks().then(() => {
 
   check('扫到的都是源码文件（防止 walk 写错导致这一节空跑）', scanned.length > 5, true);
   check('云函数与 shared 里没有 { each: ... } 形态的数组更新指令', offenders, []);
+
+  // ── 需求仓储 ──────────────────────────────────────────────────────
+  section('需求仓储 — 原子占位、回滚、状态重算');
+
+  const demandRepo = require(path.join(__dirname, '..', 'shared', 'demandRepo'));
+  await demandRepoChecks(demandRepo);
 
   console.log(`\n${'─'.repeat(50)}`);
   console.log(`通过 ${passed} 项，失败 ${failed} 项`);

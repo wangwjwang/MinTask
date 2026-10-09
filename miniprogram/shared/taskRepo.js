@@ -298,7 +298,10 @@ function mergeCollaboratorSnapshot(oldSnapshot, linkedNames, claimedNames) {
   return out.join(';');
 }
 
-/** 分页取全量。云函数端单次上限 100，不循环会被静默截断。 */
+/**
+ * 分页取全量。云函数端单次上限 100，不循环会被静默截断。
+ * 导出的：demandRepo 的每日巡检与 readDemand 外的全量读共用。
+ */
 async function fetchAll(db, collectionName) {
   const out = [];
   for (let skip = 0; ; skip += QUERY_BATCH) {
@@ -411,4 +414,7 @@ module.exports = {
   mergeCollaboratorSnapshot,
   splitNames,
   relinkMemberData,
+  // 通用 db 助手（与任务领域无关，需求池的巡检复用）
+  fetchAll,
+  runBatched,
 };

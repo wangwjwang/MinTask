@@ -28,6 +28,7 @@ const { runGenerate } = require('./lib/shared/periodicRunner');
 const { buildCtx } = require('./lib/shared/ctx');
 const { BizError, Codes, describeInfraError } = require('./lib/shared/errors');
 const { isValidDateStr } = require('./lib/shared/dates');
+const { syncAllDemands } = require('./lib/shared/demandRepo');
 
 /** 把 asOf 读成 'YYYY-MM-DD'；没给返回 undefined（按真实今天算）。 */
 function readAsOf(v) {
@@ -57,10 +58,31 @@ exports.main = async (event = {}) => {
     console.log('[generatePeriodicTasks] 定时巡检开始', event.TriggerName || event.Type);
     try {
       const result = await runGenerate(db, { operator: 'timer' });
+
+      /*
+       * ── 需求状态兜底重算 ────────────────────────────────────────────
+       * 四个即时落点（建任务 / 改任务 / 报进展 / 删任务）都可能重算失败 ——
+       * 它们一律被 syncDemandQuietly 吞掉以保证主流程不被带崩。这里就是
+       * 那些漏网之鱼的收敛口：每天扫一遍，把派生状态拉回真实状态。
+       * ★ 不新建一个云函数：一个每天只跑一次的巡检单独占一个函数名、
+       *   一份部署、一份 lib/shared 副本，代价大于收益；而本函数本来就是
+       *   "每天扫一遍库、把派生状态收敛到真实状态"的定位，加这一段是同性质的。
+       */
+      let demandSync = null;
+      try {
+        demandSync = await syncAllDemands(db);
+        console.log(
+          `[generatePeriodicTasks] 需求重算 扫描=${demandSync.scanned} 变化=${demandSync.changed}`
+        );
+      } catch (e) {
+        // 需求重算失败不能影响周期任务生成的结果（它已经落库了），只记日志
+        console.error('[generatePeriodicTasks] 需求重算失败', e);
+      }
+
       console.log(
         `[generatePeriodicTasks] 完成 以 ${result.today} 为准 新建=${result.created.length} 跳过=${result.skipped.length} 失败=${result.failed.length}`
       );
-      return { ok: true, data: result };
+      return { ok: true, data: Object.assign({ demandSync }, result) };
     } catch (e) {
       // 定时触发的返回值无人接收，只能靠日志排查。这里必须打全堆栈。
       console.error('[generatePeriodicTasks] 巡检异常', e);

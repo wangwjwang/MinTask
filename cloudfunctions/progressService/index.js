@@ -33,6 +33,7 @@ const {
   recomputeTaskBlockers,
   applyStageSideEffects,
 } = require('./lib/shared/taskRepo');
+const { syncDemandQuietly } = require('./lib/shared/demandRepo');
 
 const TASKS = COLLECTIONS.TASKS;
 const RECORDS = COLLECTIONS.PROGRESS_RECORDS;
@@ -136,6 +137,17 @@ async function addRecord(payload, ctx) {
     applyStageSideEffects(taskPatch, task);
     taskPatch.updatedAt = ctx.db.serverDate();
     await ctx.db.collection(TASKS).doc(taskId).update({ data: taskPatch });
+  }
+
+  // ── 5b. 阶段变了就重算需求状态 ────────────────────────────────────────
+  /*
+   * ★ 只在 stage 真的在 patch 里时才动 —— 普通进展（只写 description）
+   *   不该引发需求重算，那会让每次上报都多两次查询。
+   * ★ syncDemandQuietly 内部吞掉一切异常：用户辛苦填的进展提交不上去，
+   *   比"需求状态晚一步同步"严重得多。
+   */
+  if ('stage' in taskPatch && task.demandId) {
+    await syncDemandQuietly(ctx.db, task.demandId);
   }
 
   // ── 6. 重算卡壳冗余字段（看板靠它一次查询拿到高亮状态）────────────────

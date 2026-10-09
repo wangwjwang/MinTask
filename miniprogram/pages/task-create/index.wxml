@@ -39,7 +39,22 @@
       bind:change="onEnumChange"
     />
 
+    <!--
+      从需求池点进来时来源锁死为「需求池」：这里干脆不渲染 picker，
+      只显示一行 + 「已固定」—— 与上面「主办人 = 本人」同款处理。
+      （灰掉一个 picker 只会做出"看着能点、点了也变"的假象。）
+    -->
+    <block wx:if="{{demandLocked}}">
+      <view class="field--picker">
+        <view class="field__label picker__label">任务来源</view>
+        <view class="row">
+          <text class="field__value">{{form.source}}</text>
+          <text class="tag create__self-tag">已固定</text>
+        </view>
+      </view>
+    </block>
     <field-picker
+      wx:else
       label="任务来源"
       field="source"
       value="{{form.source}}"
@@ -47,6 +62,47 @@
       required
       bind:change="onEnumChange"
     />
+
+    <!--
+      来源 = 需求池时才出现：必须指定关联哪一条待认领的需求。
+      「领走」不是另一个按钮，而是"就这条需求建一个任务"这个动作本身 ——
+      多一个"领走"按钮再接一层表单，等于同一个意图点两次。
+      ★ !isPlan：计划不关联需求（计划是模板，没有"领走"这回事）
+    -->
+    <block wx:if="{{!isPlan && form.source === '需求池'}}">
+      <block wx:if="{{demandLocked}}">
+        <view class="field--picker">
+          <view class="field__label field__label--required picker__label">关联需求</view>
+          <view class="row">
+            <text class="field__value ellipsis">{{demandTitle}}</text>
+            <text class="tag create__self-tag">已选定</text>
+          </view>
+        </view>
+      </block>
+      <block wx:else>
+        <picker mode="selector" range="{{demandOptions}}" range-key="title" bindchange="onDemandChange">
+          <view class="field--picker">
+            <view class="field__label field__label--required picker__label">关联需求</view>
+            <view class="row">
+              <text class="field__value {{demandId ? '' : 'field__value--empty'}}">
+                {{demandTitle || '请选择要认领的需求'}}
+              </text>
+              <text class="field__arrow">›</text>
+            </view>
+          </view>
+        </picker>
+        <!--
+          「池子空了」和「没拉到」必须分开说：前者让用户去建一条，
+          后者是加载失败（重进本页就好），说成"没有需求"会把人支使去做无用功。
+        -->
+        <view wx:if="{{demandLoadFailed}}" class="t-muted create__tip">
+          需求池没加载出来。可以把来源改成别的先建任务，或稍后重进本页。
+        </view>
+        <view wx:elif="{{!demandOptions.length}}" class="t-muted create__tip">
+          需求池里暂时没有待认领的需求。可以先到「需求池」页提一条，或者把来源改成别的。
+        </view>
+      </block>
+    </block>
 
     <field-picker
       label="任务性质"

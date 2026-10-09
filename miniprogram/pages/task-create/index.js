@@ -92,6 +92,25 @@ Page({
     /** 是否展开协办人选择面板 */
     memberPanelOpen: false,
 
+    // ── 关联需求（来源 = 需求池时才出现）─────────────────────────────
+    /**
+     * 可选的「待认领」需求。★ 只列待认领的：已领走/已关闭的需求
+     * 由云函数拒（claimDemand 的条件里带 status），摆出来只会让人白填一屏。
+     */
+    demandOptions: [],
+    /** 选中的需求 _id。'' 表示没选 */
+    demandId: '',
+    /** 选中的需求标题（picker 的 range-key 读它，页面外也用来做摘要） */
+    demandTitle: '',
+    /**
+     * 从需求池点进来时锁死：来源不可改、需求不可换。
+     * ★ 锁死的不是"体验问题"—— 换一条需求就等于领走另一条，
+     *   与用户点进来的意图不符。
+     */
+    demandLocked: false,
+    /** 需求池没拉回来（服务未部署 / 网络失败）。与"池子是空的"要分开说 */
+    demandLoadFailed: false,
+
     /** 截止日期选择器的上限（10 年），避免用户选到离谱的日期 */
     maxDate: '',
     /** 开始日期选择器下限（1 年前），允许补录历史任务 */
@@ -121,7 +140,10 @@ Page({
     token: '',
   },
 
-  onLoad() {
+  onLoad(options) {
+    // 从需求池点进来时带的 ?demandId=（见 init 里的预填与锁定）
+    this.presetDemandId = (options && options.demandId) || '';
+
     const today = dates.todayStr();
     const tenYears = new Date();
     tenYears.setFullYear(tenYears.getFullYear() + 10);
@@ -154,7 +176,25 @@ Page({
         (m) => m.openid && m.role !== C.ROLE.VIEWER
       );
 
-      this.setData({
+      /*
+       * ── 关联需求：只列「待认领」的 ──────────────────────────────────
+       *
+       * ★ 单独 try/catch，不能和上面的成员加载共用一个 catch：
+       *   需求池拉不到（比如 cloudfunctions/demandService 还没部署完）
+       *   只该让「关联需求」这一块空着，绝不能让协办人列表跟着变空 ——
+       *   那会让人以为"团队里没人了"，而且建任务照样能建（只是不带 demandId）。
+       */
+      let pending = [];
+      let demandLoadFailed = false;
+      try {
+        const demandRes = await api.demandApi.list();
+        pending = (demandRes.list || []).filter((d) => d.status === '待认领');
+      } catch (e) {
+        console.error('[task-create] 需求池加载失败', e);
+        demandLoadFailed = true;
+      }
+
+      const patch = {
         leaderId: session.openid,
         leaderName: session.member.name,
         canPickLeader: isAdmin,
@@ -166,7 +206,37 @@ Page({
         }),
         // 自己不能作为自己的协办人，从候选里剔除
         allMembers: claimed.filter((m) => m.openid !== session.openid),
-      });
+        demandOptions: pending,
+        demandLoadFailed,
+      };
+
+      /*
+       * 从需求池点进来（?demandId=xxx）：来源锁死、需求预选、名字与描述预填。
+       *
+       * ★ 三条都要判：需求存在 且 仍是「待认领」。
+       *   已被别人领走的需求（点进来那一刻的竞态）绝不能锁死并预填 ——
+       *   否则用户会填一整屏、提交时才被云函数拒，或者更糟：
+       *   建出一条自己以为领走了、其实指向别人的任务。
+       */
+      const preset = pending.find((d) => d._id === this.presetDemandId);
+      if (preset) {
+        patch['form.source'] = '需求池';
+        patch.demandId = preset._id;
+        patch.demandTitle = preset.title;
+        patch.demandLocked = true;
+        // 预填**不覆盖**用户已经输入的内容（onLoad 到 init 之间可能已经打过字）
+        if (!this.data.form.task_name) patch['form.task_name'] = preset.title;
+        if (!this.data.form.detail) patch['form.detail'] = preset.detail || '';
+      } else if (this.presetDemandId && !demandLoadFailed) {
+        // ★ 只有"确实拿到了列表、但里面没有这条"才敢说它被领走了。
+        //   列表本身没拉到时 pending 也是空的 —— 那种情况说"已被领走"
+        //   是在编造一个不存在的事实，而且用户照做去重选也选不出东西来。
+        toast.error('这条需求已被领走或已关闭，请回需求池另选一条');
+      } else if (demandLoadFailed) {
+        toast.error('需求池没加载出来，请稍后重进本页');
+      }
+
+      this.setData(patch);
     } catch (e) {
       if (e.code !== 'NEED_CLAIM') this.setData({ allMembers: [] });
     }
@@ -182,6 +252,14 @@ Page({
 
   onEnumChange(e) {
     const { field, value } = e.detail;
+
+    /*
+     * ★ 从需求池点进来时来源是锁死的（要的就是那条需求的「领走」动作）：
+     *   界面上这个 picker 根本不会渲染，见 index.wxml；这里是第二道 ——
+     *   真被改到了也丢掉这次改动，不留下"需求挂着、来源却变了"的脏状态。
+     */
+    if (field === 'source' && this.data.demandLocked) return;
+
     const patch = { [`form.${field}`]: value };
     // 切回「不适用」时清空具体规则，避免留下无意义的残留文本
     if (field === 'recur_freq' && value === '不适用') {
@@ -191,10 +269,31 @@ Page({
     if (field === 'task_type') {
       patch.isPlan = value === '周期性';
     }
+    /*
+     * ★ 来源一改成别的，关联就作废：留着会在提交时带出一条"来源不是需求池、
+     *   却挂着 demandId"的任务（它会把那条需求误标成已领走）。
+     */
+    if (field === 'source' && value !== '需求池') {
+      patch.demandId = '';
+      patch.demandTitle = '';
+    }
     this.setData(patch);
     if (field === 'task_type') {
       wx.setNavigationBarTitle({ title: this.data.isPlan ? '新建计划' : '新建任务' });
     }
+  },
+
+  /** 选了哪条待认领的需求 */
+  onDemandChange(e) {
+    const d = this.data.demandOptions[Number(e.detail.value)];
+    if (!d) return;
+    this.setData({ demandId: d._id, demandTitle: d.title });
+  },
+
+  /** 清空选择 —— 只在不锁死时才允许（锁死时 picker 都不渲染，这里是第二道） */
+  onClearDemand() {
+    if (this.data.demandLocked) return;
+    this.setData({ demandId: '', demandTitle: '' });
   },
 
   /**
@@ -271,6 +370,12 @@ Page({
       toast.toast('开始时间不能晚于截止时间');
       return;
     }
+    // ★ 来源选了「需求池」就必须指定要关联哪一条 —— 云函数那边也会拒，
+    //   这里拦一道是为了别让用户白填一整屏
+    if (form.source === '需求池' && !this.data.demandId) {
+      toast.toast('请选择要关联的需求');
+      return;
+    }
 
     this.setData({ submitting: true });
 
@@ -290,12 +395,14 @@ Page({
 
     try {
       const myOpenid = auth.currentOpenid();
+      // 只有来源确实是「需求池」时才把 demandId 传上去（防残留的脏状态）
+      const demandId = form.source === '需求池' ? this.data.demandId : '';
 
       // 管理员选了他人当主办人时走 adminCreate，否则走普通 create
       if (canPickLeader && leaderId && leaderId !== myOpenid) {
-        await api.taskApi.adminCreate(leaderId, task, this.data.token);
+        await api.taskApi.adminCreate(leaderId, task, this.data.token, demandId);
       } else {
-        await api.taskApi.create(task, this.data.token);
+        await api.taskApi.create(task, this.data.token, demandId);
       }
 
       toast.success('创建成功');

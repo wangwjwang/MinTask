@@ -69,6 +69,9 @@ scripts/database_export-*
 # 而且它们**必须**与源表同时更新，一旦不同步就是"看到的数据和库里不一样"。
 scripts/tasks.import.json
 scripts/progress_records.import.json
+# make-source-rename-import.js 生成的覆盖导入件（SOURCE 改名的一次性迁移）。
+# 内容是从控制台导出的任务快照，同样带真实姓名，同理不进仓库。
+scripts/tasks.sourcerename.import.json
 
 # ── 协办名单修复产物 ──────────────────────────────────────────────────
 # make-collab-fix-import.js 生成，整份文档覆盖导入用。

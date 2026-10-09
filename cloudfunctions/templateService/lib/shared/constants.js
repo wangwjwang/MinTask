@@ -23,11 +23,17 @@ const CATEGORY = [
   '其他',
 ];
 
-/** 任务来源（8 项业务来源，不含 period——周期任务用 origin 字段标识） */
+/**
+ * 任务来源（8 项业务来源，不含 period——周期任务用 origin 字段标识）。
+ * ★ 第 3 项 2026-10-09 由「业务部门提报」改名为「需求池」。
+ *   数组的**长度与顺序都不能动** —— 顺序是 field-picker 高亮下标的依据，
+ *   改了顺序所有历史任务的来源都会在界面上显示错位。
+ *   库里已有数据的改名见 scripts/make-source-rename-import.js。
+ */
 const SOURCE = [
   '总行通知',
   '监管检查',
-  '业务部门提报',
+  '需求池',
   '部领导交办',
   '中心领导交办',
   '会议纪要',
@@ -52,6 +58,33 @@ const STAGE = ['未开始', '进行中', '已完成'];
 
 /** 优先级（4 项） */
 const PRIORITY = ['P0', 'P1', 'P2', 'P3'];
+
+/**
+ * 需求状态 —— 需求自己的生命周期，与任务的 STATUS / STAGE 无关。
+ *
+ * ★ 是**数组**（给 validate.assertEnum 用），不是 ROLE 那样的对象。
+ *   写 DEMAND_STATUS.PENDING 会静默得到 undefined，where 条件会变成
+ *   "status 等于 undefined" —— 一个不报错、也永远匹配不上的查询。
+ */
+const DEMAND_STATUS = ['待认领', '已领走', '已完成', '已关闭'];
+
+/**
+ * 需求状态 → 徽标配色 key（沿用 app.wxss 的 .badge--{key}）。
+ *
+ * 语义：
+ *   待认领＝蓝色（等着被拿走）
+ *   已领走＝黄色（有人在办，还没结论）
+ *   已完成＝绿色
+ *   已关闭＝灰色（不做也是一种了结，但不需要被庆祝）
+ *
+ * ★ 复用现有四个 tone，不新增色值。
+ */
+const DEMAND_STATUS_TONE = {
+  待认领: 'active',
+  已领走: 'warn',
+  已完成: 'done',
+  已关闭: 'idle',
+};
 
 /** 任务创建方式 —— 与 SOURCE（业务来源）正交，两者都要保留 */
 const ORIGIN = {
@@ -96,6 +129,7 @@ const COLLECTIONS = {
   PROGRESS_RECORDS: 'progress_records',
   PERIODIC_TEMPLATES: 'periodic_templates',
   JOB_LOGS: 'job_logs',
+  DEMANDS: 'demands',
 };
 
 /**
@@ -132,6 +166,8 @@ module.exports = {
   STATUS,
   STAGE,
   PRIORITY,
+  DEMAND_STATUS,
+  DEMAND_STATUS_TONE,
   ORIGIN,
   ROLE,
   STAGE_COLUMNS,

@@ -6,6 +6,17 @@ cloudfunctions/*/node_modules/
 # scripts/sync-shared.js 生成的副本，但**必须提交进仓库** ——
 # 否则别人 clone 下来无法直接编译（会缺模块）。
 # 这是「零构建步骤」约束的代价，不要把它们加进 .gitignore。
+#
+# ★ 唯一的例外是 dashboardService（电脑端看板的只读云函数）：
+#   它的 index.js 只 require('wx-server-sdk')，**完全不用 shared/** ——
+#   有意做成自包含的，好让电脑端与小程序端互不牵连。
+#   但 sync-shared.js 是按目录扫的，会照灌一份进去。那份副本：
+#     1. 没有任何 require 指向它，是纯粹的死代码；
+#     2. 会随 shared/ 变化而无意义地产生 diff 噪音；
+#     3. 最要命的是会让人以为"dashboardService 依赖 shared，
+#        所以 shared 一改它也得重新部署"—— 它不用。
+#   所以单独忽略掉。它在磁盘上会被 sync 重新生成，这是正常的。
+cloudfunctions/dashboardService/lib/
 
 # ── 密钥与本地配置（★ 绝对不要提交）────────────────────────────────────
 *.env
@@ -91,6 +102,8 @@ cloudfunctions/*/package-lock.json
 # ── 第三方工具产物 ────────────────────────────────────────────────────
 .workbuddy/
 .wbapp_*.genie
+# 实现计划执行过程中的进度账本与审查包（临时产物，计划做完即删）
+.superpowers/
 
 # ── 生成 tabBar 图标用的临时雪碧图 ────────────────────────────────────
 # 仓库里零引用（scripts/gen-tabbar-icons.js 不读它），图标 PNG 已提交。

@@ -471,6 +471,39 @@ check('origin 有 manual/periodic 两值', [C.ORIGIN.MANUAL, C.ORIGIN.PERIODIC],
 check('状态徽标配色齐全', C.STATUS.every((s) => !!C.STATUS_TONE[s]), true);
 check('阶段徽标配色齐全', C.STAGE.every((s) => !!C.STAGE_TONE[s]), true);
 
+// 需求池：四个状态必须与 spec 完全一致，且每个状态都有配色 key。
+// ★ 这条断言是「不发明枚举值」的机器执行者 —— 少一个 / 多一个都会红。
+check('需求状态字典', C.DEMAND_STATUS, ['待认领', '已领走', '已完成', '已关闭']);
+check(
+  '★ 每个需求状态都有配色 key（漏一个会拿到 undefined，徽标变成无色）',
+  // ★ 写成 (… || {}) 而不是直接点：枚举还不存在时这里会抛 TypeError，
+  //   脚本会当场崩在第一条断言上，后面几条谁对谁错就看不出来了。
+  //   断言失败应该是"报红"，不是"炸掉"。
+  (C.DEMAND_STATUS || []).map((s) => (C.DEMAND_STATUS_TONE || {})[s]),
+  ['active', 'warn', 'done', 'idle']
+);
+check('需求集合名', C.COLLECTIONS.DEMANDS, 'demands');
+check(
+  '部署期错误提示的集合清单含 demands',
+  S('errors').ALL_COLLECTIONS.indexOf('demands') !== -1,
+  true
+);
+
+// ★ SOURCE 只改名、不动顺序 —— 顺序是 field-picker 的高亮下标依据。
+//   改了顺序，所有历史任务的来源都会在界面上显示错位。
+check('来源仍是 8 项', C.SOURCE.length, 8);
+check('★ 第三项（下标 2）是「需求池」', C.SOURCE[2], '需求池');
+check('旧名「业务部门提报」已不在枚举里', C.SOURCE.indexOf('业务部门提报'), -1);
+check('其余七项一个没动', C.SOURCE.filter((s) => s !== '需求池'), [
+  '总行通知',
+  '监管检查',
+  '部领导交办',
+  '中心领导交办',
+  '会议纪要',
+  '考评落实',
+  '自发创新',
+]);
+
 // ---------------------------------------------------------------------------
 section('进展记录构造（buildProgressDoc）');
 

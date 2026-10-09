@@ -89,6 +89,7 @@ const ALL_COLLECTIONS = [
   'progress_records',
   'periodic_templates',
   'job_logs',
+  'demands',
 ];
 
 /** 把任意异常拼成一段可做关键字匹配的文本 */

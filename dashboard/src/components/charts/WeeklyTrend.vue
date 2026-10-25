@@ -7,6 +7,7 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import * as echarts from 'echarts';
 import { useStore } from '../../store/dashboard';
 import { readTokens } from './charts-theme';
+import { fixTouchStuckEmphasis } from './touchFix';
 
 const store = useStore();
 const el = ref(null);
@@ -56,7 +57,7 @@ function render() {
   }, true);
 }
 
-onMounted(() => { chart = echarts.init(el.value); render(); window.addEventListener('resize', resize); });
+onMounted(() => { chart = echarts.init(el.value); fixTouchStuckEmphasis(chart); render(); window.addEventListener('resize', resize); });
 onBeforeUnmount(() => { window.removeEventListener('resize', resize); if (chart) chart.dispose(); });
 watch(() => store.theme, render);
 watch(() => store.filteredTasks, render, { deep: false });

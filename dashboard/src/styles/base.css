@@ -1,5 +1,5 @@
 /* =========================================================================
- * TeamPulse Dashboard — base styles
+ * MinTask Dashboard — base styles
  * 视觉令牌由唯一主题文件 themes/relate.css（冷静蓝 Relate）通过 CSS 变量注入。
  * 这里只写与主题无关的布局与组件结构。组件一律引用 var(--xxx)。
  * ========================================================================= */
@@ -49,6 +49,8 @@ button { font-family: inherit; cursor: pointer; }
 }
 .nav-link:hover { background: var(--c-surface-2); color: var(--c-text); }
 .nav-link.router-link-active { background: var(--c-surface-3); color: var(--c-accent); }
+/* 底部导航默认隐藏，仅在移动端显示（见响应式块） */
+.mobile-nav { display: none; }
 .topbar-spacer { flex: 1; }
 .theme-switcher { display: flex; gap: 6px; background: var(--c-surface-2); padding: 4px; border-radius: var(--r-pill); }
 .theme-switcher button {
@@ -178,6 +180,7 @@ button { font-family: inherit; cursor: pointer; }
 .person-card .pc-stats { display: flex; gap: 14px; margin-top: 14px; }
 .person-card .pc-stat .v { font-size: 20px; font-weight: var(--fw-bold); color: var(--c-text-strong); }
 .person-card .pc-stat .l { font-size: 11px; color: var(--c-text-faint); }
+.person-card .pc-risk { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--c-danger); }
 .mini-bar { height: 6px; border-radius: 99px; background: var(--c-surface-2); overflow: hidden; margin-top: 12px; }
 .mini-bar > i { display: block; height: 100%; background: var(--c-ok); }
 
@@ -235,15 +238,32 @@ button { font-family: inherit; cursor: pointer; }
   .people-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 820px) {
-  .main { padding: 16px; }
+  .main { padding: 16px; padding-bottom: 88px; }
   .board { grid-template-columns: 1fr; }
   .chart-grid { grid-template-columns: 1fr; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .people-grid { grid-template-columns: repeat(2, 1fr); }
   .nav-links { display: none; }
   .theme-switcher button { padding: 5px 9px; font-size: 11px; }
+  /* 移动端底部固定标签栏：替代被隐藏的顶部导航，保证可切换视图 */
+  .mobile-nav {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: var(--c-surface); border-top: 1px solid var(--c-border);
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -2px 14px rgba(0,0,0,.06);
+  }
+  .mnav-link {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 8px 4px; font-size: 12px; font-weight: var(--fw-medium);
+    color: var(--c-text-muted); border: none; min-height: 52px;
+  }
+  .mnav-link .mnav-ico { font-size: 18px; line-height: 1; }
+  .mnav-link:active { background: var(--c-surface-2); }
+  .mnav-link.router-link-active { color: var(--c-accent); }
 }
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .people-grid { grid-template-columns: 1fr; }
+  /* 超小屏仅保留 logo，避免顶部品牌文字与按钮拥挤 */
+  .brandmark > span:not(.logo) { display: none; }
 }

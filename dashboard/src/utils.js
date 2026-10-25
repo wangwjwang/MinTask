@@ -30,8 +30,29 @@ export function avatarColor(name) {
   return PALETTE[h % PALETTE.length];
 }
 
+/**
+ * 任务状态四态（互斥，四者之和 = 任务总数）：
+ *   卡壳 > 已完成 > 逾期 > 正常
+ * ★ 判据与小程序看板对齐：卡壳 = 有未解决阻碍项（hasOpenBlocker）；
+ *   逾期 = 截止日已过且未完成（dueInfo.overdue，已完成的任务不算逾期）。
+ * ★ 为什么不看 status 字段：库里 status 只有 正常/已完成 两种实值
+ *   （"受阻/有风险"两条枚举全库 0 条使用），按它分会漏掉真正的卡壳任务
+ *   —— 2026-10-19 用户实测"主页卡壳显示 0、实际 2 条"就是这么来的。
+ * ★ 优先级：卡壳盖过逾期（既卡壳又逾期只算卡壳，与"风险与临期"列表同序），
+ *   已完成盖过逾期（dueInfo 对已完成本就返回不逾期，这里显式再挡一道）。
+ * ★ "有风险"不再作为展示态：全库 0 条使用，用户明确"状态只有逾期/卡壳这种类型"。
+ */
+export function statusBucket(t) {
+  if (!t) return '正常';
+  if (t.hasOpenBlocker) return '卡壳';
+  if (t.stage === '已完成') return '已完成';
+  if (dueInfo(t.dueDate, t.stage).overdue) return '逾期';
+  return '正常';
+}
+
 export function statusTone(s) {
-  return { 正常: 'ok', 有风险: 'warn', 受阻: 'danger', 已完成: 'done' }[s] || 'idle';
+  // 卡壳与逾期同为红色——沿用小程序的设计语言（红＝受阻/逾期，见 theme.js 注释）
+  return { 正常: 'ok', 逾期: 'danger', 卡壳: 'danger', 已完成: 'done' }[s] || 'idle';
 }
 export function stageTone(s) {
   return { 未开始: 'idle', 进行中: 'active', 已完成: 'done' }[s] || 'idle';

@@ -2,7 +2,7 @@
   <Login v-if="!store.isAuthed" />
   <div v-else class="app-shell">
     <header class="topbar">
-      <div class="brandmark"><span class="logo">T</span><span>TeamPulse 团队看板</span></div>
+      <div class="brandmark"><span class="logo">M</span><span>MinTask 团队看板</span></div>
       <nav class="nav-links">
         <router-link class="nav-link" to="/overview">总览</router-link>
         <router-link class="nav-link" to="/tasks">任务看板</router-link>
@@ -17,6 +17,18 @@
       <div v-else-if="store.loading" class="loading">数据加载中…</div>
       <div v-else-if="store.error" class="loading" style="color:var(--c-danger)">{{ store.error }}</div>
     </main>
+    <!-- 移动端底部标签栏：小屏顶部导航被隐藏，这里提供视图切换入口 -->
+    <nav class="mobile-nav">
+      <router-link class="mnav-link" to="/overview">
+        <span class="mnav-ico">◧</span><span class="mnav-txt">总览</span>
+      </router-link>
+      <router-link class="mnav-link" to="/tasks">
+        <span class="mnav-ico">▤</span><span class="mnav-txt">任务看板</span>
+      </router-link>
+      <router-link class="mnav-link" to="/people">
+        <span class="mnav-ico">◍</span><span class="mnav-txt">人员看板</span>
+      </router-link>
+    </nav>
   </div>
 </template>
 

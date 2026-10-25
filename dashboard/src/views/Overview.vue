@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="eyebrow">TEAM PULSE · 数据同步自小程序</div>
+    <div class="eyebrow">MinTask · 数据同步自小程序</div>
     <div class="section-head">
       <h2 class="section-title">团队总览</h2>
       <span class="section-sub">最近同步：{{ store.lastSync || '—' }}</span>

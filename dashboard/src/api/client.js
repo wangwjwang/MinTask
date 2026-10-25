@@ -10,7 +10,7 @@
 import tcb from '@cloudbase/js-sdk';
 import { buildMock } from './mock';
 
-const ENV_ID = 'cloudbase-d4gvt9mox2e73b8fb';
+const ENV_ID = 'cloudbase-d9gl0ogzkfd0d94f2';
 let appPromise = null;
 
 function getApp() {
@@ -22,7 +22,7 @@ function getApp() {
       .then(() => app)
       .catch((e) => {
         // 匿名登录异常时仍返回 app，交由 callFunction 暴露真实错误
-        console.warn('[TeamPulse] 匿名登录异常：', e && e.message);
+        console.warn('[MinTask] 匿名登录异常：', e && e.message);
         return app;
       });
   }

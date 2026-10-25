@@ -108,6 +108,14 @@ cloudfunctions/*/package-lock.json
 # 实现计划执行过程中的进度账本与审查包（临时产物，计划做完即删）
 .superpowers/
 
+# ── 2026-10-11 环境迁移时的数据库快照 ────────────────────────────────
+# 与 scripts/database_export-* 同理：含真实 openid + 业务明细，
+# 是某一时刻的快照，git 历史永久不可擦，绝对不进仓库。
+migration-backup/
+# miniprogram/ 下误放的 project.config.json 副本（appid 与正式的都不一致，
+# 根目录的 project.config.json 才是有效的）。不删文件，仅阻止入库。
+miniprogram/project.config.json
+
 # ── 生成 tabBar 图标用的临时雪碧图 ────────────────────────────────────
 # 仓库里零引用（scripts/gen-tabbar-icons.js 不读它），图标 PNG 已提交。
 tmp-icon-sheet.png

@@ -198,16 +198,4 @@ Page({
       api.showError(e);
     }
   },
-
-  /** 复制未认领名单，方便发给同事催认领 */
-  onCopyUnclaimed() {
-    const names = this.data.members.filter((m) => !m.claimed).map((m) => m.name);
-    if (!names.length) {
-      toast.toast('所有人都已认领');
-      return;
-    }
-    wx.setClipboardData({
-      data: `还未认领 TeamPulse 账号：${names.join('、')}`,
-    });
-  },
 });

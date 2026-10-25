@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "TeamPulse 团队管理看板 · 电脑端可交互展示（三套主题皮肤）",
+  "description": "MinTask 团队管理看板 · 电脑端可交互展示（三套主题皮肤）",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

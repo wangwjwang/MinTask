@@ -15,7 +15,7 @@
       <view class="row row--between row--top">
         <view class="row row--top flex-1 detail__title">
           <view class="chip__dot chip__dot--lead" style="background: {{task._catColor}}"></view>
-          <view class="t-title" bindlongpress="onCopyTaskName">{{task.task_name}}</view>
+          <view class="t-title">{{task.task_name}}</view>
         </view>
         <view wx:if="{{task.source}}" class="tag detail__source">{{task.source}}</view>
       </view>

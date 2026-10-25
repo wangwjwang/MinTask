@@ -6,7 +6,7 @@
         <button class="drawer-close" @click="$emit('close')">×</button>
       </div>
       <div class="drawer-meta">
-        <span class="badge" :class="'tone-' + statusTone(task.status)">{{ task.status }}</span>
+        <span class="badge" :class="'tone-' + statusTone(statusBucket(task))">{{ statusBucket(task) }}</span>
         <span class="badge tone-idle plain">{{ task.category }}</span>
         <span class="badge tone-idle plain">{{ task.stage }}</span>
         <span class="badge" :class="'tone-' + priorityTone(task.priority)">{{ task.priority }}</span>
@@ -35,7 +35,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { statusTone, priorityTone, dueInfo, fmtDateTime } from '../utils';
+import { statusTone, priorityTone, dueInfo, fmtDateTime, statusBucket } from '../utils';
 const props = defineProps({ task: { type: Object, required: true } });
 const di = computed(() => dueInfo(props.task.dueDate, props.task.stage));
 defineEmits(['close']);

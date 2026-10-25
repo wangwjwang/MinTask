@@ -1,7 +1,7 @@
 <template>
   <div class="login-wrap">
     <div class="login-card">
-      <h1>TeamPulse 团队看板</h1>
+      <h1>MinTask 团队看板</h1>
       <p>请输入团队共享访问口令以进入（口令由管理员在群里统一下发）。</p>
       <div v-if="error" class="login-error">{{ error }}</div>
       <input

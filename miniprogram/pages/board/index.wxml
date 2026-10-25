@@ -32,10 +32,10 @@
   <view class="board__summary">
     <view class="pill-row">
       <view class="pill">共 <text class="pill__value">{{stats.total}}</text> 项</view>
-      <view class="pill {{stats.blocked ? 'pill--danger' : ''}}" bindtap="onBlockedTap">
+      <view class="pill {{stats.blocked ? 'pill--danger' : ''}} {{sortKey === 'blocked' ? 'pill--active' : ''}}" bindtap="onBlockedTap">
         卡壳 <text class="pill__value">{{stats.blocked}}</text>
       </view>
-      <view class="pill {{stats.overdue ? 'pill--warn' : ''}}">
+      <view class="pill {{stats.overdue ? 'pill--warn' : ''}} {{sortKey === 'overdue' ? 'pill--active' : ''}}" bindtap="onOverdueTap">
         逾期 <text class="pill__value">{{stats.overdue}}</text>
       </view>
     </view>
@@ -115,7 +115,27 @@
       </view>
     </view>
 
-    <block wx:elif="{{groups.length}}">
+    <block wx:elif="{{groups.length || pinned.length}}">
+      <!--
+        置顶区：点「卡壳 / 逾期」胶囊后，命中的任务从各分类组里被抽出，
+        单独排在列表最顶部（字面意义"调到最上头"）；下方分类组不再含它们。
+        再点一次胶囊（取消置顶）→ sortKey 清空 → pinned 为空 → 恢复默认分组视图。
+      -->
+      <view wx:if="{{pinned.length}}" class="board__pinned">
+        <view class="board__pinned-head">
+          <view class="chip__dot chip__dot--pin"></view>
+          <text class="board__pinned-title">{{pinnedLabel}}置顶</text>
+          <text class="board__pinned-count">{{pinned.length}}</text>
+        </view>
+        <task-card
+          wx:for="{{pinned}}"
+          wx:for-item="task"
+          wx:key="_id"
+          task="{{task}}"
+          bind:tap="onTaskTap"
+        />
+      </view>
+
       <!-- 当前分段内按任务分类分组，每组可点标题折叠 -->
       <view
         wx:for="{{groups}}"

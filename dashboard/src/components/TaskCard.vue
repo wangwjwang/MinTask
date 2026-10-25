@@ -2,7 +2,7 @@
   <div class="task-card" :class="{ blocked: task.hasOpenBlocker }" @click="$emit('open', task)">
     <div class="tc-top">
       <div class="tc-name">{{ task.name }}</div>
-      <span class="badge" :class="'tone-' + statusTone(task.status)">{{ task.status }}</span>
+      <span class="badge" :class="'tone-' + statusTone(statusBucket(task))">{{ statusBucket(task) }}</span>
     </div>
     <div class="tc-meta">
       <span class="badge tone-idle plain">{{ task.category }}</span>
@@ -19,7 +19,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { statusTone, priorityTone, dueInfo } from '../utils';
+import { statusTone, priorityTone, dueInfo, statusBucket } from '../utils';
 const props = defineProps({ task: { type: Object, required: true } });
 const di = computed(() => dueInfo(props.task.dueDate, props.task.stage));
 defineEmits(['open']);

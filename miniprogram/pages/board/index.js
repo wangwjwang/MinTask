@@ -112,7 +112,7 @@ function byOwner(a, b) {
  * ★ 为什么不是「先 setData 状态、再在回调里重算列表」：那会留下一帧错配，
  *   见 paint 的注释（2026-10-03 实测的那个「看板错乱」）。
  */
-function viewFor(allTasks, allPlans, segmentTab, collapsedMap) {
+function viewFor(allTasks, allPlans, segmentTab, collapsedMap, sortKey) {
   // ★ 这里原来有一层分类筛选（hitCat）：2026-10-03 用户拍板删掉了那个控件。
   //   看板本来就是按分类分组、组标题吸顶还带条数，筛选只是多造一个
   //   看不见的页面状态。删掉之后 allTasks / allPlans 就是渲染用的全部。
@@ -128,6 +128,20 @@ function viewFor(allTasks, allPlans, segmentTab, collapsedMap) {
 
   let rows = [];
   let groups = [];
+  /**
+   * ★ 置顶区（点顶部「卡壳 / 逾期」胶囊触发）：
+   *   把命中（卡壳 / 逾期）的任务从各分类组里**抽出来**，统一排到当前分段
+   *   列表的最顶部；下方分类组不再包含这些任务（避免重复），其余任务保持
+   *   原相对顺序 —— 正好"卡壳的调到最上头、其他的顺序不变"。
+   *   ★ 为什么不是「组内提到最前」：用户要的是"卡壳的都调到最上头"，
+   *     若只在各自分类组里靠前，会被后面的分类组标题挡住，看上去像没动。
+   *     抽出来单独成区，才是字面意义上的"最上头"，也不受 WeChat 对
+   *     keyed 自定义组件重排不挪节点的渲染怪癖影响。
+   *   ★ 只在阶段段生效；计划段没有任务，pinned 恒为空。
+   *   ★ 清空 sortKey 时 pinned 为空，分组恢复全量，视图回到默认。
+   */
+  let pinned = [];
+  let pinnedLabel = '';
 
   if (isPlanSeg) {
     // ── 计划段：平铺全体成员的计划，同一主办人的排在一起 ──────────────
@@ -136,13 +150,24 @@ function viewFor(allTasks, allPlans, segmentTab, collapsedMap) {
     // ── 阶段段：按分类分组 ──────────────────────────────────────────
     const inSeg = allTasks.filter((t) => inSegment(t, segmentTab));
 
+    // 命中判据：仅在 sortKey 非空时，把命中的任务抽离到置顶区。
+    const isHot = sortKey
+      ? (sortKey === 'blocked' ? (t) => !!t._hasBlocker : (t) => !!t._overdue)
+      : null;
+    let rest = inSeg;
+    if (isHot) {
+      pinned = inSeg.filter(isHot);
+      rest = inSeg.filter((t) => !isHot(t));
+      pinnedLabel = sortKey === 'blocked' ? '卡壳' : '逾期';
+    }
+
     // 分组顺序跟 C.CATEGORY 的枚举顺序走（而不是按任务数量排序），
     // 这样同一条任务每次渲染都落在同一位置，不会切个分段就跳位置。
     // 空分类不产生分组。
-    const cats = C.CATEGORY.filter((c) => inSeg.some((t) => t.category === c));
+    const cats = C.CATEGORY.filter((c) => rest.some((t) => t.category === c));
     // ★ 兜底：万一库里有分类不在枚举内（有人直接在控制台改库就可能出现），
     //   追加到末尾，绝不能让它从看板上悄悄消失。
-    inSeg.forEach((t) => {
+    rest.forEach((t) => {
       if (cats.indexOf(t.category) === -1) cats.push(t.category);
     });
 
@@ -153,7 +178,7 @@ function viewFor(allTasks, allPlans, segmentTab, collapsedMap) {
         category,
         /** 分类色由 JS 查表给出 —— WXML 不能调函数，只能内联 style */
         color: theme.categoryColor(category),
-        tasks: inSeg.filter((t) => t.category === category),
+        tasks: rest.filter((t) => t.category === category),
         // 用户没手动动过的分组用默认值：已完成默认收起，其余默认展开
         collapsed: key in collapsedMap ? collapsedMap[key] : segmentTab === '已完成',
       };
@@ -177,6 +202,8 @@ function viewFor(allTasks, allPlans, segmentTab, collapsedMap) {
     tabs,
     plans: rows,
     groups,
+    pinned,
+    pinnedLabel,
     empty,
     stats: {
       total: allTasks.length,
@@ -191,6 +218,15 @@ Page({
     loading: true,
     /** 当前查看的分段 */
     segmentTab: DEFAULT_SEG,
+    /**
+     * 任务看板顶部「卡壳 / 逾期」胶囊的置顶焦点：''=不置顶，
+     * 'blocked'=卡壳置顶，'overdue'=逾期置顶。两个胶囊互斥，再点取消。
+     */
+    sortKey: '',
+    /** 置顶区：被置顶的任务列表（从各分类组抽出来排到最顶部） */
+    pinned: [],
+    /** 置顶区标题前缀：'卡壳' / '逾期' / ''（空） */
+    pinnedLabel: '',
     /**
      * 分段切换上的计数：[{ seg, count }]，顺序跟随 SEGMENTS。
      * 各段的数字由 viewFor 一次算好，与列表同一次 setData 写下去。
@@ -321,7 +357,7 @@ Page({
       Object.assign(
         {},
         patch,
-        viewFor(s.allTasks, s.allPlans, s.segmentTab, s.collapsedMap)
+        viewFor(s.allTasks, s.allPlans, s.segmentTab, s.collapsedMap, s.sortKey)
       ),
       cb
     );
@@ -434,13 +470,37 @@ Page({
     wx.navigateTo({ url: `/pages/plan-edit/index?id=${id}` });
   },
 
-  /** 点统计里的"卡壳"，提示卡壳任务在卡片上的标记方式 */
+  /**
+   * 点顶部「卡壳」胶囊：切换"卡壳置顶"。
+   * ★ 不再是弹说明文字 —— 改成把卡壳任务提到当前分段列表的最顶部。
+   * ★ 再点一次（已激活时）取消置顶，恢复默认顺序；点「逾期」会互斥切换过去。
+   */
   onBlockedTap() {
     if (!this.data.stats.blocked) {
       toast.toast('当前没有卡壳任务');
       return;
     }
-    toast.toast(`有 ${this.data.stats.blocked} 项任务存在未解决的卡壳，卡片左侧有红条标记`);
+    this.toggleSort('blocked');
+  },
+
+  /**
+   * 点顶部「逾期」胶囊：切换"逾期置顶"。与卡壳同款逻辑。
+   */
+  onOverdueTap() {
+    if (!this.data.stats.overdue) {
+      toast.toast('当前没有逾期任务');
+      return;
+    }
+    this.toggleSort('overdue');
+  },
+
+  /**
+   * 置顶焦点的切换：同一个来回切（激活→取消），点另一个互斥换过去。
+   * 只动 sortKey 一个字段，再走 paint 重算列表，折叠状态等都不受影响。
+   */
+  toggleSort(key) {
+    const next = this.data.sortKey === key ? '' : key;
+    this.paint({ sortKey: next });
   },
 });
 

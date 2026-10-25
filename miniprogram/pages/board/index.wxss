@@ -124,3 +124,39 @@
   font-size: var(--fs-sub);
   color: var(--text-sub);
 }
+
+/* ── 置顶区（点「卡壳 / 逾期」胶囊后，命中任务被抽到最顶部）── */
+.board__pinned {
+  margin-bottom: var(--gap-sm);
+  padding: 8rpx var(--gap) 4rpx;
+  margin-left: calc(-1 * var(--gap));
+  margin-right: calc(-1 * var(--gap));
+  background: var(--tone-active-bg);
+  border-left: 8rpx solid var(--tone-active, #2563EB);
+}
+
+.board__pinned-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 12rpx 0;
+}
+
+.chip__dot--pin {
+  background: var(--tone-active, #2563EB);
+}
+
+.board__pinned-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--tone-active, #2563EB);
+}
+
+.board__pinned-count {
+  flex-shrink: 0;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

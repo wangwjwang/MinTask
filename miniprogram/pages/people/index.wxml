@@ -19,9 +19,8 @@
         <text wx:if="{{unclaimedCount}}">已认领 {{claimedCount}}</text>
         <text
           wx:if="{{unclaimedCount}}"
-          class="people__unclaimed hit"
-          bindtap="onCopyUnclaimed"
-        >待认领 {{unclaimedCount}} · 点击复制名单</text>
+          class="people__unclaimed"
+        >待认领 {{unclaimedCount}}</text>
         <text wx:else>全部已认领</text>
       </view>
     </view>

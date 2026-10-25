@@ -134,13 +134,4 @@ Page({
       }
     });
   },
-
-  /** 长按任务名复制，方便在群里同步 */
-  onCopyTaskName() {
-    const task = this.data.task;
-    if (!task) return;
-    wx.setClipboardData({
-      data: `${task.task_name}（主办：${task.leader || '—'}｜截止：${task.due_date || '未设置'}）`,
-    });
-  },
 });

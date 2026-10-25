@@ -13,7 +13,7 @@
 
 module.exports = {
   /** 云开发环境 ID */
-  envId: 'cloudbase-d4gvt9mox2e73b8fb',
+  envId: 'cloudbase-d9gl0ogzkfd0d94f2',
 
   /** 云函数名集中定义。改名时只改这里，避免全项目搜索替换漏掉。 */
   functions: {

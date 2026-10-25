@@ -176,12 +176,13 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
   <nav class="toc">
     <a href="#claim">① 认领姓名</a>
     <a href="#pages">② 五个页面</a>
-    <a href="#card">③ 看懂任务卡片</a>
-    <a href="#report">④ 上报进展</a>
-    <a href="#create">⑤ 建任务 / 建计划 / 改任务</a>
-    <a href="#board">⑥ 两个看板</a>
-    <a href="#perm">⑦ 谁能改什么</a>
-    <a href="#faq">⑧ 常见问题</a>
+    <a href="#demand">③ 领需求：需求池与认领</a>
+    <a href="#card">④ 看懂任务卡片</a>
+    <a href="#report">⑤ 上报进展</a>
+    <a href="#create">⑥ 建 / 改任务</a>
+    <a href="#board">⑦ 两个看板</a>
+    <a href="#perm">⑧ 谁能改什么</a>
+    <a href="#faq">⑨ 常见问题</a>
   </nav>
 </header>
 
@@ -281,9 +282,97 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
   <div class="note">如果账号是<b>只读的「管理者」</b>，「报任务」「改任务」两个页签会变灰点不动 —— 这是设计如此，不是故障。看板他都能看，「领需求」也能看、能自己提需求，只是不能把别人的需求领去办。</div>
 </section>
 
-<!-- ══ ③ 任务卡片 ═══════════════════════════════════════════════ -->
+<!-- ══ ③ 领需求：需求池与认领 ════════════════════════════════ -->
+<section id="demand">
+  <h2><span class="num">③</span>领需求：需求池与认领</h2>
+  <p class="lead">最左边的页签「领需求」，是事情<b>成形之前</b>的落点。很多事最初只是一个念头 ——「得找财富部聊聊那个权益的事」。眼下这种念头无处可放：要么硬建成一条残缺的任务，要么留在微信聊天里。需求池承接这一段：<b>需求是还没成形的事，任务是已经有人认领的事。</b></p>
+
+  <div class="phone phone--solo">
+    <div class="phone__nav">领需求</div>
+    <div class="phone__body">
+      <div class="m-card">
+        <div class="m-title" style="font-size:18px">5<text style="font-size:13px;color:var(--muted)"> 条等着认领</text></div>
+        <div class="m-sub">我领的 3 · 我提的 2</div>
+      </div>
+      <div class="m-seg" style="margin-bottom:10px">
+        <span class="on">待认领<b>5</b></span>
+        <span>我领的<b>3</b></span>
+        <span>我提的<b>2</b></span>
+        <span>已关闭<b>2</b></span>
+      </div>
+      <div class="m-card">
+        <div class="m-row m-row--between" style="align-items:flex-start">
+          <span style="flex:1;font-size:14px;line-height:1.4;font-weight:600">和财富部聊机场贵宾权益</span>
+          <span class="m-badge m-badge--active">待认领</span>
+        </div>
+        <div class="m-sub" style="margin-top:6px">财富部 · 王主任 &nbsp; 期望 10 月底</div>
+        <div class="m-row m-row--between" style="margin-top:8px">
+          <span class="m-sub">张三 提出 · 2 天前</span>
+        </div>
+      </div>
+      <div class="m-card">
+        <div class="m-row m-row--between" style="align-items:flex-start">
+          <span style="flex:1;font-size:14px;line-height:1.4;font-weight:600">包头住维金系统对接测试</span>
+          <span class="m-badge m-badge--done">已完成</span>
+        </div>
+        <div class="m-sub" style="margin-top:6px">已由 李四 领走 · 关联 1 个任务</div>
+      </div>
+      <div class="m-entry" style="margin-top:4px">
+        <div><div class="t">新建需求</div><div class="s">还没成形的事先记在这里</div></div>
+        <div class="arrow">›</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>四个分段，各自装什么</h3>
+  <ul>
+    <li><b>待认领</b> —— 等着人接的需求。点开一条就是去新建任务（= 把它领走）。</li>
+    <li><b>我领的</b> —— 我已经领走、正在办的需求。</li>
+    <li><b>我提的</b> —— 我记进去的需求（不管后来谁领走了）。</li>
+    <li><b>已关闭</b> —— 决定不做了的需求，卡片上会显示关闭原因。</li>
+  </ul>
+  <p>左右滑动列表即可切换分段。同一个需求可能同时出现在「我领的」和「我提的」里（我提的我自己领），这是正常的，两个分段问的是两件事。</p>
+
+  <h3>一条需求长什么样</h3>
+  <ul>
+    <li><b>标题</b>（必填，一句话）+ <b>描述</b>（选填）。</li>
+    <li><b>对接部门 / 对接人</b> —— 纯外部联系人（"我们要去找谁聊"），<b>不进</b>人员体系、不参与任何权限，也不会出现在认领页或人员看板里。</li>
+    <li><b>期望时间</b>（选填，YYYY-MM-DD）。</li>
+    <li><b>提出人</b>（自动记）、<b>状态</b>、<b>领走人</b>、<b>关闭原因</b>（关闭时填）。</li>
+  </ul>
+
+  <h3>怎么"领走"一条需求</h3>
+  <p>在<b>待认领</b>分段点一条需求 → 直接进「新建任务」页：<b>来源自动锁定为「需求池」</b>、关联需求已经选好、任务名和描述用需求内容预填（可改）→ 提交 → 这条需求变成「已领走」，同时生成一条任务。领走是原子动作，两个人同时点也不会被领两次。</p>
+  <div class="note">"领走"不是一个单独的按钮，它就是"就这条需求建一个任务"这个动作本身 —— 多一层按钮等于同一个意图点两次。</div>
+
+  <h3>需求自己会流转（生命周期）</h3>
+  <p>需求的四个状态：<b>待认领 → 已领走 → 已完成 / 已关闭</b>。多数变化是自动的，不用手点：</p>
+  <table>
+    <thead><tr><th>事件</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>新建一条需求</td><td>待认领</td></tr>
+      <tr><td>被领走（= 基于它建了任务）</td><td>已领走</td></tr>
+      <tr><td>下面的关联任务<b>全部</b>完成</td><td>自动变成 已完成</td></tr>
+      <tr><td>任务被删光（没人在办了）</td><td>退回 待认领（让下一个人接）</td></tr>
+      <tr><td>决定不做了，手动关闭（填原因）</td><td>已关闭</td></tr>
+      <tr><td>已关闭的需求手动重新打开</td><td>回到 待认领</td></tr>
+    </tbody>
+  </table>
+  <div class="note warn"><b>「已关闭」不会被自动改动</b> —— 一个"我决定不做了"的结论，不该被隔壁任务的状态变化悄悄推翻。想再做就点「重新打开」。</div>
+
+  <h3>谁能建 / 改 / 关</h3>
+  <ul>
+    <li><b>所有人</b>（含管理者）都能把想法记进需求池（新建需求）。</li>
+    <li><b>提出人、领走人、管理员</b>能改需求内容、能关闭 / 重开。</li>
+    <li><b>管理者</b>（只读角色）能看需求池、能建需求、能改能关<b>自己提的</b>那条 —— 但他领不走（领走 = 建任务，他被拦在门外）。</li>
+    <li>别人提的需求，你领不走也改不了、关不掉，只能看着它或被你领。</li>
+  </ul>
+  <div class="note">顺带一提：任务「来源」里的 <b>「业务部门提报」已改名为「需求池」</b>，历史任务的来源会一并更新显示。</div>
+</section>
+
+<!-- ══ ④ 任务卡片 ═══════════════════════════════════════════════ -->
 <section id="card">
-  <h2><span class="num">③</span>看懂任务卡片</h2>
+  <h2><span class="num">④</span>看懂任务卡片</h2>
   <p class="lead">所有列表用的都是同一张卡片，认识一次就够。</p>
 
   <div class="annot">
@@ -333,7 +422,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
 
 <!-- ══ ④ 上报进展 ═══════════════════════════════════════════════ -->
 <section id="report">
-  <h2><span class="num">④</span>上报进展</h2>
+  <h2><span class="num">⑤</span>上报进展</h2>
   <p class="lead">在<b>报任务</b>页点任意一张卡片，就进到上报进展页。这是日常用得最多的操作。</p>
 
   <div class="phone phone--solo">
@@ -387,8 +476,17 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
   </ul>
   <p><b>协办人</b>只填这三个框；进度、状态、阶段由主办人维护，协办的界面里根本不显示。</p>
 
-  <h3>AI 精简：把口语整理成规范的进展</h3>
-  <p>语音或手打的内容常有口语和错别字。点一下「AI 精简」，它会结合当前任务的名称与目标，把话理顺、改掉错别字、压到 50 字左右，同时把「卡壳 / 需要支持」自动分离到对应框里。原文没说的东西它不会编。</p>
+  <h3>AI 精简：把口语整理成规范的进展（重点功能）</h3>
+
+  <div class="note" style="border-left-color:var(--primary);background:var(--primary-soft)"><b>★ 强烈建议用起来。</b>上报进展时，无论你是<b>长按说话转成文字</b>，还是手打，内容往往夹着口语、口头禅和错别字。点一下「AI 精简」，它会结合当前任务的<b>名称与目标</b>，把这段内容：<b>理顺语句、改正错别字、压到 50 字左右</b>，并自动把里面的「卡壳 / 需要支持」分离到对应框里。<b>原文没提到的东西它绝不会瞎编。</b></div>
+
+  <p>这一下能省掉大量"回头整理纪要"的功夫 —— 提交上去的就是一段干净、规范、可直接给领导看的进展。使用要点：</p>
+  <ul>
+    <li><b>必须先在上面输入框写好内容</b>（语音或手打都行），空内容时点不动。</li>
+    <li>精简结果<b>写回输入框</b>，不满意可以接着改、或重新写 —— AI 只是帮你起草，最终你说了算。</li>
+    <li>刚精简完按钮变「已精简」并置灰；你再改一次内容，它又变回可点。</li>
+    <li><b>AI 出问题或没启用时不会挡住你</b>：会提示原因并保留原文，照常提交（精简是锦上添花，不是必经步骤）。</li>
+  </ul>
 
   <div class="m-card" style="display:flex;flex-direction:column;gap:10px">
     <div class="m-row m-row--between"><span class="m-sub">没输入内容时 —— 点不动</span><span class="m-btn m-btn--off" style="padding:6px 14px">AI 精简</span></div>
@@ -396,7 +494,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
     <div class="m-row m-row--between"><span class="m-sub">刚精简完 —— 变「已精简」并置灰，再改一次内容才重新可点</span><span class="m-btn m-btn--off" style="padding:6px 14px">已精简</span></div>
   </div>
 
-  <div class="note">精简结果会写回输入框，<b>不满意可以直接改</b>，也可以重新写。AI 出问题或没启用时不会挡住你 —— 会提示原因并保留原文，照常提交。</div>
+  <div class="note">「AI 精简」由后台的 DeepSeek 模型驱动，需要在云函数 <code>callAI</code> 上开启（管理员配好开关与密钥后即自动可用）。启用后所有人在上报进展时都能点；没启用时该按钮点了会提示"AI 精简未启用"，不影响正常提交。</div>
 
   <h3>提交</h3>
   <p>提交失败直接重试即可，<b>不会产生重复记录</b> —— 系统按提交令牌去重，网络抖动时反复点也安全。</p>
@@ -404,7 +502,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
 
 <!-- ══ ⑤ 建 / 改 ════════════════════════════════════════════════ -->
 <section id="create">
-  <h2><span class="num">⑤</span>建任务 / 建计划 / 改任务</h2>
+  <h2><span class="num">⑥</span>建 / 改任务</h2>
 
   <h3>新建任务</h3>
   <p>报任务页最下方「<b>新建任务</b>」入口。表单要填：任务名称、任务详情 / 目标描述、分类、来源，人员（普通同事主办人固定是本人，管理员可以选别人；协办人可多选），以及计划开始 / 截止时间。</p>
@@ -444,7 +542,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
 
 <!-- ══ ⑥ 看板 ═══════════════════════════════════════════════════ -->
 <section id="board">
-  <h2><span class="num">⑥</span>两个看板</h2>
+  <h2><span class="num">⑦</span>两个看板</h2>
 
   <h3>任务看板 —— 全团队的任务</h3>
   <div class="phone phone--solo">
@@ -452,7 +550,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
     <div class="phone__body">
       <div class="m-pills">
         <span class="m-pill">共 <b>61</b> 项</span>
-        <span class="m-pill m-pill--danger">卡壳 <b>3</b></span>
+        <span class="m-pill m-pill--danger" style="box-shadow:0 0 0 2rpx var(--primary);font-weight:600">卡壳 <b>3</b></span>
         <span class="m-pill">逾期 <b>5</b></span>
       </div>
       <div class="m-seg">
@@ -488,6 +586,8 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
     <li>看板是<b>只读</b>的：点卡片只看详情，要改请去改任务页。</li>
   </ul>
 
+  <div class="note"><b>★ 点「卡壳」或「逾期」胶囊，把相关任务直接钉到最上头。</b>这是看板最近新增的快捷方式：点一下顶部红色「卡壳」胶囊（此时胶囊亮起蓝圈），所有卡壳任务会被从各分类组里抽出来，单独排在列表最顶部一块蓝色「卡壳置顶 N」区；点「逾期」则抽出逾期任务，显示「逾期置顶 N」。下方分类组不再含这些任务（不重复），其余任务顺序完全不变。再点一次同一胶囊可取消置顶、恢复默认顺序；两个胶囊互斥（点一个会切到另一个）。置顶区里的卡片照样可点进详情。</div>
+
   <h3>人员看板 —— 谁手上多少活</h3>
   <div class="phone phone--solo">
     <div class="phone__nav">人员看板</div>
@@ -515,7 +615,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
 
 <!-- ══ ⑦ 权限 ═══════════════════════════════════════════════════ -->
 <section id="perm">
-  <h2><span class="num">⑦</span>谁能改什么</h2>
+  <h2><span class="num">⑧</span>谁能改什么</h2>
   <p class="lead">规则很简单：<b>我的任务我负责，别人的任务我帮忙。</b>界面上看不到的按钮，后台也同样拦得住。</p>
 
   <table>
@@ -544,7 +644,7 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color
 
 <!-- ══ ⑧ 常见问题 ═══════════════════════════════════════════════ -->
 <section id="faq">
-  <h2><span class="num">⑧</span>常见问题</h2>
+  <h2><span class="num">⑨</span>常见问题</h2>
 
   <details>
     <summary>报任务页顶上出现「10 天以上没有新进展」，是什么？</summary>

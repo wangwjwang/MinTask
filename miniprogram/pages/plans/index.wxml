@@ -11,6 +11,15 @@
       开发者工具会报「Bad attr `wx:else` ... wx:if not found」并停止编译整个文件。
     -->
     <block wx:if="{{list.length}}">
+      <!-- 巡检健康横幅：定时触发器失效是静默的，必须把状态摆到眼前 -->
+      <view
+        wx:if="{{patrol && patrol.state !== 'ok'}}"
+        class="patrol-banner patrol-banner--{{patrol.state}}"
+      >
+        <view class="patrol-banner__title">{{patrol.title}}</view>
+        <view class="patrol-banner__text">{{patrol.text}}</view>
+      </view>
+
       <view class="card card--flat plans__intro">
         <view class="t-sub">
           计划本身不产生任务。到了每期的开始日，系统才自动生成当期任务；
@@ -43,6 +52,26 @@
         <view class="plans__line">
           <text class="plans__k">任务名</text>
           <text class="plans__v">{{item._taskName || '—'}}</text>
+        </view>
+
+        <!--
+          本期缺失告警 + 手动补生成入口。
+          ★ 该生成本期了却还没有任务 = 巡检失效的直接后果，
+            不给入口用户就只能等管理员跑 generateNow。
+        -->
+        <view wx:if="{{item._missedCurrent}}" class="plans__missed">
+          <view class="plans__missed-text">
+            本期任务未生成（{{item._missedPeriod}}），巡检可能未生效
+          </view>
+          <button
+            class="plans__gen-btn"
+            size="mini"
+            catchtap="onGenerateCurrent"
+            data-id="{{item._id}}"
+            disabled="{{generatingId === item._id}}"
+          >
+            {{generatingId === item._id ? '生成中…' : '立即生成本期'}}
+          </button>
         </view>
       </view>
     </block>

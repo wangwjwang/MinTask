@@ -26,6 +26,7 @@ const COLLECTIONS = {
   TASKS: 'tasks',
   PROGRESS: 'progress_records',
   TEMPLATES: 'periodic_templates',
+  JOB_LOGS: 'job_logs',
 };
 const QUERY_BATCH = 100;
 
@@ -129,6 +130,36 @@ async function getAll(coll, where) {
   return out;
 }
 
+/**
+ * 最近一次「每日巡检」记录 —— 看板据此展示巡检健康状态。
+ *
+ * ★ 与 templateService.list 的 lastPatrol 同一份语义：巡检失效是静默的，
+ *   小程序计划页能看到，Web 看板也应该能看到 —— 否则管理者在两边的
+ *   信息口径不一致。null 表示从未运行过（触发器未上线）。
+ */
+async function readLastPatrol() {
+  const r = await db
+    .collection(COLLECTIONS.JOB_LOGS)
+    .where({ type: 'generatePeriodicTasks' })
+    .orderBy('finishedAt', 'desc')
+    .limit(1)
+    .get();
+  const doc = (r.data || [])[0];
+  if (!doc) return null;
+  return {
+    finishedAt: normalizeDate(doc.finishedAt),
+    today: doc.today || '',
+    createdCount: (doc.created || []).length,
+    failedCount: (doc.failed || []).length,
+    failed: (doc.failed || []).map((f) => ({
+      templateId: f.templateId || '',
+      name: f.name || '',
+      error: f.error || '',
+    })),
+    operator: doc.operator || '',
+  };
+}
+
 /** 核心：校验口令并返回看板聚合数据 */
 async function aggregate(passcode) {
   const envPass = process.env.DASHBOARD_PASSCODE || '';
@@ -142,6 +173,7 @@ async function aggregate(passcode) {
   const tasksRaw = await getAll(COLLECTIONS.TASKS, {});
   const templates = await getAll(COLLECTIONS.TEMPLATES, {});
   const records = await getAll(COLLECTIONS.PROGRESS, {});
+  const lastPatrol = await readLastPatrol().catch(() => null);
 
   const byTask = {};
   for (const r of records) {
@@ -158,6 +190,7 @@ async function aggregate(passcode) {
     tasks,
     periodicTemplates: templates,
     progressCount: records.length,
+    lastPatrol,
   };
 }
 

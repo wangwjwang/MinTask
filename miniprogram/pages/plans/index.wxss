@@ -48,3 +48,71 @@
   font-size: var(--fs-sub);
   color: var(--text-sub);
 }
+
+/*
+ * 巡检健康横幅。三种状态共用一套骨架，只有左边条与配色不同：
+ *   missing（从未运行）→ 红：一期都不会生成，是最严重的形态
+ *   stale（中断）      → 红：同上，只是曾经好过
+ *   failed（有失败）   → 黄：巡检活着，但有计划生成失败
+ */
+.patrol-banner {
+  padding: 20rpx 24rpx;
+  margin-bottom: var(--gap-sm);
+  border-radius: 12rpx;
+  border-left: 6rpx solid var(--tone-danger);
+  background: var(--tone-danger-bg);
+}
+
+.patrol-banner--failed {
+  border-left-color: var(--tone-warn);
+  background: var(--tone-warn-bg);
+}
+
+.patrol-banner__title {
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.patrol-banner__text {
+  font-size: var(--fs-micro);
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+/*
+ * 本期缺失告警行：一条说明 + 一个补生成按钮。
+ * 与上面的横幅同色系（warn），横幅讲的是"系统整体"，这行讲的是"这条计划"。
+ */
+.plans__missed {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid var(--line, #EDEEF2);
+}
+
+.plans__missed-text {
+  flex: 1;
+  font-size: var(--fs-micro);
+  color: var(--tone-warn);
+  line-height: 1.5;
+}
+
+.plans__gen-btn {
+  flex: none;
+  margin: 0;
+  font-size: var(--fs-micro);
+  color: #fff;
+  background: var(--tone-warn);
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  line-height: 56rpx;
+}
+
+.plans__gen-btn[disabled] {
+  opacity: 0.6;
+  color: #fff;
+  background: var(--tone-warn);
+}

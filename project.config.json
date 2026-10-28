@@ -1,10 +1,10 @@
 {
-  "description": "TeamPulse 团队任务管理系统 · 微信小程序端",
+  "description": "MinTask 团队任务管理系统 · 微信小程序端",
   "miniprogramRoot": "miniprogram/",
   "cloudfunctionRoot": "cloudfunctions/",
   "compileType": "miniprogram",
   "appid": "wx9b44b7b4f10a5b32",
-  "projectname": "TeamPulse",
+  "projectname": "MinTask",
   "libVersion": "3.17.3",
   "setting": {
     "urlCheck": false,

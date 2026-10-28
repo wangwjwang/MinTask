@@ -26,13 +26,21 @@
  *   toggle       启用 / 停用
  *   delete       删除计划（只删计划，已生成的历史任务不动）
  *   generateNow  立即生成（管理员，幂等；asOf 可补跑历史周期）
+ *   generateThisPeriod 按单个计划立即生成本期（主办人或管理员，幂等）
  *   preview      预演：不写库，只返回"会生成什么"
  * ---------------------------------------------------------------------------
  */
 
 const { createRouter } = require('./lib/shared/router');
 const { BizError, Codes } = require('./lib/shared/errors');
-const { COLLECTIONS, CATEGORY, SOURCE, PRIORITY, ROLE, QUERY_BATCH } = require('./lib/shared/constants');
+const {
+  COLLECTIONS,
+  CATEGORY,
+  SOURCE,
+  PRIORITY,
+  ROLE,
+  QUERY_BATCH,
+} = require('./lib/shared/constants');
 const validate = require('./lib/shared/validate');
 const { runGenerate } = require('./lib/shared/periodicRunner');
 const { isValidDateStr } = require('./lib/shared/dates');
@@ -40,6 +48,8 @@ const perm = require('./lib/shared/perm');
 const { MONTHS_PER_PERIOD, NAME_PREFIX, evaluate } = require('./lib/shared/periodic');
 
 const TEMPLATES = COLLECTIONS.PERIODIC_TEMPLATES;
+const TASKS = COLLECTIONS.TASKS;
+const JOB_LOGS = COLLECTIONS.JOB_LOGS;
 
 /** 表单里会碰「排期」的字段。改到其中任何一个，都要整体重算并校验。 */
 const SCHEDULE_FIELDS = ['periodType', 'startMonthIdx', 'startDay', 'endMonthIdx', 'endDay'];
@@ -120,10 +130,73 @@ function readAsOf(v) {
 // ---------------------------------------------------------------------------
 
 /**
+ * 给一批计划标记「本期任务是否缺失」（_missedCurrent）。
+ *
+ * ★ 为什么后端算而不是前端算：前端只有计划、看不到 tasks 集合（安全规则
+ *   不允许客户端直查），而"该生成本期了却还没生成"正是巡检失效时用户
+ *   唯一能自查的信号 —— 这个信号必须由能看到全部数据的云函数给出。
+ *
+ * 判定与巡检同源：evaluate（同一份 periodic.js）判 due，due 且库里查不到
+ * （templateId + periodKey）对应任务才算缺失。每天多花的只是「due 的计划数」
+ * 次 count 查询，并行发出，代价可忽略。
+ */
+async function markMissedCurrent(templates, ctx) {
+  const now = new Date();
+  const checks = await Promise.all(
+    (templates || []).map(async (t) => {
+      const ev = evaluate(t, now);
+      if (!ev.due) return { t, missed: false, ev };
+      const dup = await ctx.db
+        .collection(TASKS)
+        .where({ templateId: t._id, periodKey: ev.periodKey })
+        .count();
+      return { t, missed: !(dup.total > 0), ev };
+    })
+  );
+  return checks.map(({ t, missed, ev }) =>
+    Object.assign({}, t, {
+      _missedCurrent: missed,
+      _missedTaskName: missed ? ev.taskName : '',
+      _missedPeriod: missed ? `${ev.startDate} — ${ev.dueDate}` : '',
+    })
+  );
+}
+
+/**
+ * 最近一次「每日巡检」的审计记录（供前端判断巡检是否还活着）。
+ *
+ * ★ 返回 null 表示 job_logs 里一条巡检记录都没有 —— 那是"触发器从未上线"
+ *   的直接证据，前端要据此给出最强提示。记录由 periodicRunner 每次执行
+ *   （含手动补跑）写入，finishedAt 是 serverDate，可安全按其倒序取最新。
+ */
+async function readLastPatrol(ctx) {
+  const r = await ctx.db
+    .collection(JOB_LOGS)
+    .where({ type: 'generatePeriodicTasks' })
+    .orderBy('finishedAt', 'desc')
+    .limit(1)
+    .get();
+  const doc = (r.data || [])[0];
+  if (!doc) return null;
+  return {
+    finishedAt: doc.finishedAt || null,
+    today: doc.today || '',
+    createdCount: (doc.created || []).length,
+    failedCount: (doc.failed || []).length,
+    failed: doc.failed || [],
+    operator: doc.operator || '',
+  };
+}
+
+/**
  * 计划列表。
  *
  * ★ 不做额外的角色闸门：非管理员一律只看得到自己的，而管理者建不了计划，
  *   所以管理者调 list 得到的是空表 —— 挡不挡结果一样，不如少一层判断。
+ *
+ * ★ 附带 lastPatrol（最近一次每日巡检）：计划页顶部的巡检健康横幅用它。
+ *   巡检失效是静默的（定时触发无重试、无告警），不把状态递到用户眼前，
+ *   就只能像这次一样等"该有的任务没出现"才被人肉发现。
  */
 async function list(payload, ctx) {
   const me = await ctx.requireMember();
@@ -134,7 +207,11 @@ async function list(payload, ctx) {
     .orderBy('createdAt', 'desc')
     .limit(QUERY_BATCH)
     .get();
-  return { list: r.data || [] };
+  const [list, lastPatrol] = await Promise.all([
+    markMissedCurrent(r.data || [], ctx),
+    readLastPatrol(ctx),
+  ]);
+  return { list, lastPatrol };
 }
 
 /**
@@ -159,7 +236,10 @@ async function listAll(payload, ctx) {
     .orderBy('createdAt', 'desc')
     .limit(QUERY_BATCH)
     .get();
-  return { list: r.data || [] };
+  // ★ 同样标记本期缺失：看板「周期性计划」段与"管理我的计划"要给出
+  //   同一个答案，否则用户在两边看到的状态会互相打架。
+  const list = await markMissedCurrent(r.data || [], ctx);
+  return { list };
 }
 
 /**
@@ -393,6 +473,28 @@ async function generateNow(payload, ctx) {
   });
 }
 
+/**
+ * 按单个计划立即生成本期（主办人或管理员）。
+ *
+ * ★ 与 generateNow 的分工：generateNow 是管理员的全量补跑（所有启用模板
+ *   一起跑）；这里只跑指定的一份，且闸门放到 assertCanManage ——
+ *   "我的计划本期没生成"不该等到管理员有空才能修，主办人自己点一下就行。
+ *
+ * ★ 直接复用 runGenerate（templateId 限定的那路）：evaluate 判 not_started /
+ *   period_expired / disabled 时会安静地跳过并说明原因，确定性 _id 保证
+ *   反复点击不会产生重复任务 —— 不需要在这里再写一份生成逻辑。
+ */
+async function generateThisPeriod(payload, ctx) {
+  await ctx.requireWriter();
+  const templateId = validate.assertNonEmptyString(payload.templateId, '计划');
+  const cur = await getTemplate(ctx, templateId);
+  await assertCanManage(cur, ctx);
+  return runGenerate(ctx.db, {
+    templateId,
+    operator: ctx.openid,
+  });
+}
+
 /** 预演：不写库，只返回会生成什么。上线前核对计划用。 */
 async function preview(payload, ctx) {
   await ctx.requireAdmin();
@@ -427,5 +529,6 @@ exports.main = createRouter({
   toggle,
   delete: remove,
   generateNow,
+  generateThisPeriod,
   preview,
 });

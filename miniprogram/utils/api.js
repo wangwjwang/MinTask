@@ -262,6 +262,12 @@ const templateApi = {
   /** asOf 是「假装今天是哪天」，用于补跑历史周期；不传就按真实今天算 */
   generateNow: (asOf, dryRun) =>
     call(config.functions.template, 'generateNow', { asOf, dryRun }),
+  /**
+   * 按单个计划立即生成本期（主办人或管理员）。幂等：反复点击不会产生重复任务。
+   * 本期已生成 / 未到开始日 / 已过期时，后端会安静跳过并在 skipped 里说明原因。
+   */
+  generateThisPeriod: (templateId) =>
+    call(config.functions.template, 'generateThisPeriod', { templateId }),
 };
 
 const notifyApi = {

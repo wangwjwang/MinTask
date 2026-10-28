@@ -226,6 +226,21 @@ page {
   color: var(--muted);
 }
 
+/* 表单分区标题：在卡片之上给出结构，让长表单不再是一堵平铺的墙 */
+.form-head {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin: 20rpx 4rpx 12rpx;
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  color: var(--text-sub);
+}
+
+.form-head:first-child {
+  margin-top: 0;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    徽标 —— 配色 key 来自 shared/constants.js 的 *_TONE
    形式是「浅底 + 深字」的胶囊，与分类标记的「实心小方块」刻意区分开
@@ -354,16 +369,30 @@ page {
   color: var(--tone-danger);
 }
 
+/*
+ * ★ 文本输入改为「凹槽式填充框」：浅底 + 圆角，与选择器（行式 + 箭头）形成
+ *   强对比 —— 用户一眼就能区分"在这里打字"和"点我选"。
+ *   填充用 --bg（页面底色），不是阴影：靠底色对比浮起来，符合全站"不用阴影"的取向。
+ */
 .field__input {
   width: 100%;
+  box-sizing: border-box;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 22rpx 24rpx;
   font-size: var(--fs-body);
   color: var(--text);
-  min-height: 48rpx;
+  min-height: 52rpx;
+  line-height: 1.4;
 }
 
 .field__textarea {
   width: 100%;
-  min-height: 160rpx;
+  box-sizing: border-box;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 22rpx 24rpx;
+  min-height: 200rpx;
   font-size: var(--fs-body);
   color: var(--text);
   line-height: 1.6;
@@ -412,10 +441,16 @@ page {
   color: var(--placeholder);
 }
 
+/*
+ * 选择器右侧的箭头：放大加粗，让它明确读作"可点开的入口"，
+ * 与左侧输入框的"打字凹槽"形成清晰的形态对比。
+ */
 .field__arrow {
   color: var(--muted);
-  font-size: var(--fs-sub);
+  font-size: 32rpx;
+  font-weight: 600;
   margin-left: 12rpx;
+  line-height: 1;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@
   <block wx:else>
     <block wx:if="{{canEdit}}">
       <!-- ── 基本信息 ──────────────────────────────────────────────── -->
+      <view class="form-head">基本信息</view>
       <view class="card">
         <view class="field">
           <view class="field__label field__label--required">计划名称</view>
@@ -64,6 +65,7 @@
       </view>
 
       <!-- ── 排期 ──────────────────────────────────────────────────── -->
+      <view class="form-head">计划排期</view>
       <view class="card">
         <plan-schedule
           name="{{form.name}}"
@@ -81,6 +83,7 @@
       </view>
 
       <!-- ── 人员 ──────────────────────────────────────────────────── -->
+      <view class="form-head">参与人员</view>
       <view class="card">
         <view class="field--picker">
           <view class="field__label picker__label">主办人</view>
@@ -120,6 +123,7 @@
       </view>
 
       <!-- ── 危险区：停用与删除 ────────────────────────────────────── -->
+      <view class="form-head">停用与删除</view>
       <view class="card card--flat edit__danger-zone">
         <view class="t-muted edit__danger-tip">
           停用后系统不再为这份计划生成新任务，已生成的任务不受影响，随时可以再启用。

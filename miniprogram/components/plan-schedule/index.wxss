@@ -1,5 +1,80 @@
 /* components/plan-schedule */
 
+/*
+ * 排期编辑区重组成「频率 / 每期区间（从 / 到）」三组，
+ * 每个选项都做成浅底填充块（.sched__control），与页面里文本输入框的
+ * 「凹槽」同属"填充"但形态不同：这里是紧凑的选择块 + 右侧箭头，
+ * 文本输入框是高瘦的打字凹槽。两者都靠 --bg 浮起来，不用阴影。
+ */
+.sched__group {
+  margin-top: 4rpx;
+}
+
+.sched__group-label {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--muted);
+  margin: 16rpx 0 6rpx;
+  padding-left: 4rpx;
+}
+
+.sched__control {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 16rpx 20rpx;
+}
+
+/* 选择块内部复用全局 .field--picker，但要去掉它自带的底边分割线 */
+.sched__control .field--picker {
+  border-bottom: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sched__control .field__value {
+  font-size: var(--fs-body);
+}
+
+.sched__control .field__arrow {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+/* 「从 / 到」两行，每行左边一个字标签，右边两个并列选择块 */
+.sched__pair {
+  display: flex;
+  align-items: stretch;
+  gap: 16rpx;
+  margin-top: 12rpx;
+}
+
+.sched__pair-k {
+  flex: none;
+  width: 32rpx;
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-sub);
+  color: var(--text-sub);
+}
+
+.sched__pair-fields {
+  flex: 1;
+  display: flex;
+  gap: 16rpx;
+  min-width: 0;
+}
+
+.sched__pair-fields .sched__control {
+  flex: 1;
+  min-width: 0;
+}
+
+.sched__mini-label {
+  font-size: var(--fs-caption);
+  color: var(--muted);
+  margin-bottom: 4rpx;
+}
+
 .sched__preview {
   margin-top: 20rpx;
   border-top: 2rpx solid var(--divider);
